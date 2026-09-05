@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    @apply bg-recess text-chalk font-body text-base antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* One focus treatment, everywhere, always visible. */
+  :focus-visible {
+    @apply outline-none shadow-ring rounded-slot;
+  }
+
+  /* Archivo is variable: pin the width axis for board numerals. */
+  .font-display { font-variation-settings: 'wdth' 112; }
+
+  ::selection { @apply bg-lamp text-graphite; }
+
+  /* Native controls inherit the board, not the OS. */
+  input, select, textarea, button { font: inherit; color: inherit; }
+  select { color-scheme: dark; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

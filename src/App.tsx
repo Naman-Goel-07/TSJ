@@ -1,0 +1,90 @@
+/**
+ * App router — all routes, all guards.
+ *
+ * Guard logic:
+ *   - /login     public; redirect to / if already signed in
+ *   - /onboarding requires session but no profile
+ *   - /          requires session + profile
+ *   - /submit    requires session + profile
+ *   - /review    requires core or lead role
+ *   - /admin     requires lead role
+ */
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import { RequireAuth, RequireProfile, RequireRole } from './guards/RouteGuards'
+
+import { Login } from './pages/Login'
+import { Onboarding } from './pages/Onboarding'
+import { Board } from './pages/Board'
+import { Submit, Review, Admin, NotFound } from './pages/Placeholders'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+    },
+  },
+})
+
+function PublicOnly({ children }: { children: React.ReactNode }) {
+  const { session, loading } = useAuth()
+  if (loading) return null
+  if (session) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
+export function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
+
+            <Route path="/onboarding" element={
+              <RequireAuth>
+                <OnboardingGate />
+              </RequireAuth>
+            } />
+
+            <Route path="/" element={
+              <RequireProfile>
+                <Board />
+              </RequireProfile>
+            } />
+
+            <Route path="/submit" element={
+              <RequireProfile>
+                <Submit />
+              </RequireProfile>
+            } />
+
+            <Route path="/review" element={
+              <RequireRole minRole="core">
+                <Review />
+              </RequireRole>
+            } />
+
+            <Route path="/admin" element={
+              <RequireRole minRole="lead">
+                <Admin />
+              </RequireRole>
+            } />
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </QueryClientProvider>
+  )
+}
+
+/** Onboarding gate: if you already have a profile, go home. */
+function OnboardingGate() {
+  const { session, profile, loading } = useAuth()
+  if (loading) return null
+  if (profile) return <Navigate to="/" replace />
+  return <Onboarding session={session} />
+}
