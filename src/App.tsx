@@ -20,6 +20,7 @@ import { Board } from './pages/Board'
 import { Submit } from './pages/Submit'
 import { Review } from './pages/Review'
 import { RollCall } from './pages/RollCall'
+import { Export } from './pages/Export'
 import { Admin, NotFound } from './pages/Placeholders'
 
 const queryClient = new QueryClient({
@@ -76,6 +77,12 @@ export function App() {
             <Route path="/booth/meetups" element={
               <RequireRole minRole="core">
                 <RollCall />
+              </RequireRole>
+            } />
+
+            <Route path="/booth/export" element={
+              <RequireRole minRole="lead">
+                <Export />
               </RequireRole>
             } />
 
