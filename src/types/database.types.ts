@@ -392,6 +392,42 @@ export interface Database {
         Args: { p_submission_id: string; p_reason: string }
         Returns: undefined
       }
+      get_members_with_roles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          full_name: string
+          department: string
+          enrollment_no: string | null
+          sprint_track: string | null
+          is_active: boolean
+          role: 'member' | 'core' | 'lead'
+          posted_count: number
+          posted_points: number
+        }[]
+      }
+      get_audit_log: {
+        Args: { p_limit?: number }
+        Returns: {
+          id: number
+          actor_name: string | null
+          action: string
+          entity: string
+          at: string
+        }[]
+      }
+      set_user_role: {
+        Args: { p_user_id: string; p_role: 'member' | 'core' | 'lead' }
+        Returns: undefined
+      }
+      set_member_active: {
+        Args: { p_member_id: string; p_is_active: boolean }
+        Returns: undefined
+      }
+      set_sprint_config: {
+        Args: { p_sprint_start: string; p_total_days: number }
+        Returns: undefined
+      }
       get_meetup_roster: {
         Args: { p_meetup_id?: string | null }
         Returns: {

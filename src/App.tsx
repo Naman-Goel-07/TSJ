@@ -21,7 +21,8 @@ import { Submit } from './pages/Submit'
 import { Review } from './pages/Review'
 import { RollCall } from './pages/RollCall'
 import { Export } from './pages/Export'
-import { Admin, NotFound } from './pages/Placeholders'
+import { Admin } from './pages/Admin'
+import { NotFound } from './pages/Placeholders'
 
 const queryClient = new QueryClient({
   defaultOptions: {
