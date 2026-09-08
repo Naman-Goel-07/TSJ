@@ -258,7 +258,7 @@ export function Board() {
           <div>
             {(mine as any[]).map((row) => (
               <div key={row.id}>
-                <MyCallRow row={row} />
+                <MyCallRow row={row} onEdit={() => navigate(`/submit?edit=${row.id}`)} />
                 <Seam />
               </div>
             ))}
@@ -270,8 +270,8 @@ export function Board() {
 }
 
 
-function MyCallRow({ row }: { row: any }) {
-  const [expanded, setExpanded] = useState(false)
+function MyCallRow({ row, onEdit }: { row: any; onEdit: () => void }) {
+  const [expanded, setExpanded] = useState(true && row.status === 'needs_info')
   const hasNote = !!row.decision_note
 
   return (
@@ -297,9 +297,14 @@ function MyCallRow({ row }: { row: any }) {
         <div className="bg-recess px-4 py-3 border-t border-seam flex flex-col gap-2">
           <p className="text-sm text-chalk/70">{row.decision_note}</p>
           {row.status === 'needs_info' && (
-            <p className="text-xs text-chalk/60">
-              Send it again with the missing evidence and it goes back into the queue.
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <p className="text-xs text-chalk/60 flex-1">
+                Add what they asked for and it goes back into the queue.
+              </p>
+              <Button variant="secondary" onClick={onEdit} className="w-full sm:w-auto">
+                Send it again
+              </Button>
+            </div>
           )}
         </div>
       )}

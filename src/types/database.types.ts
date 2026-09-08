@@ -356,6 +356,34 @@ export interface Database {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      get_my_submission: {
+        Args: { p_id: string }
+        Returns: {
+          id: string
+          activity_id: string
+          activity_label: string
+          activity_level: string | null
+          title: string
+          occurred_on: string
+          details: string | null
+          external_url: string | null
+          status: 'pending' | 'needs_info' | 'verified' | 'rejected' | 'revoked'
+          decision_note: string | null
+        }[]
+      }
+      resubmit_submission: {
+        Args: {
+          p_id: string
+          p_activity_id: string
+          p_title: string
+          p_occurred_on: string
+          p_details?: string | null
+          p_external_url?: string | null
+          p_add_proofs?: Json
+          p_remove_proof_ids?: string[]
+        }
+        Returns: undefined
+      }
       get_submission_proofs: {
         Args: { p_submission_id: string }
         Returns: {

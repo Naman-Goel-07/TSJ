@@ -1,413 +1,626 @@
 /**
- * /submit — the member write path.
+ * / — Team Board
+ *
+ * Data sources:
+ *   - get_team_total() → one integer, the only point figure visible to members
+ *   - sprint_config     → sprint start date and total days (no points)
+ *   - get_board_feed()  → verified items: name, activity, level, date (no points)
  *
  * Rules enforced here:
- *   - activity_catalog is queried WITHOUT the points column. A member's browser
- *     never receives a point value from this page.
- *   - Files are uploaded first, then submit_achievement() writes the submission
- *     row and its proof rows in one transaction. If the RPC fails, the uploaded
- *     files are deleted. There is no window in which an orphan row can exist.
- *   - status and awarded_points are never sent from the client.
+ *   - Zero point values rendered anywhere on this page except the single team total
+ *   - get_board_feed is called via RPC — never direct select from submissions
+ *   - Sprint day is computed from sprint_config, never hardcoded
  */
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useForm, type Resolver } from 'react-hook-form'
+import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { z } from 'zod'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { useAuth } from '../context/AuthContext'
 import { BoardLayout } from '../components/layout/BoardLayout'
 import { BoardPanel } from '../components/board/BoardPanel'
 import { SignLabel } from '../components/board/SignLabel'
+import { Meter } from '../components/board/Meter'
+import { FeedRow } from '../components/board/FeedRow'
+import { Skeleton } from '../components/primitives/Skeleton'
 import { Seam } from '../components/primitives/Seam'
 import { Button } from '../components/primitives/Button'
-import { Skeleton } from '../components/primitives/Skeleton'
-import { ErrorState } from '../components/feedback/EmptyState'
-import { Field, Input, Select, Textarea, CharCount, FilePicker, AttachedFile } from '../components/primitives/Field'
+import { EmptyState, ErrorState } from '../components/feedback/EmptyState'
+import { StatusPill } from '../components/status/StatusPill'
 
-const MAX_BYTES = 10 * 1024 * 1024
-const ACCEPT = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf']
-const ACCEPT_ATTR = '.png,.jpg,.jpeg,.webp,.pdf'
-
-const CATEGORY_HEADINGS: Record<string, string> = {
-  team_activity: 'Team activity',
-  individual: 'Individual',
-  sprint_track: 'Sprint track',
-  bonus: 'Bonus',
-}
-const CATEGORY_ORDER = ['team_activity', 'individual', 'sprint_track', 'bonus']
-
-function today(): string {
-  const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+function computeSprintDay(sprintStart: string, totalDays: number): { day: number; total: number } {
+  const start = new Date(sprintStart)
+  const today = new Date()
+  // zero out time component for clean day diff
+  start.setHours(0, 0, 0, 0)
+  today.setHours(0, 0, 0, 0)
+  const diffMs = today.getTime() - start.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1
+  const day = Math.min(Math.max(diffDays, 1), totalDays)
+  return { day, total: totalDays }
 }
 
-const schema = z.object({
-  activity_id: z.string().min(1, 'Pick the achievement type from the list.'),
-  title: z
-    .string()
-    .trim()
-    .min(3, 'Give it a title of at least 3 characters.')
-    .max(120, 'Keep the title under 120 characters.'),
-  occurred_on: z
-    .string()
-    .min(1, 'Pick the date this happened.')
-    .refine(v => v <= today(), 'That date is in the future. Pick the day it actually happened.'),
-  details: z.string().max(1000, 'Trim the details to 1000 characters or fewer.').optional(),
-  external_url: z
-    .string()
-    .trim()
-    .refine(v => v === '' || /^https?:\/\/\S+\.\S+/.test(v), 'Include the full link, starting with https://')
-    .optional(),
-})
-
-type FormValues = z.infer<typeof schema>
-
-/** Minimal zod resolver so we do not need to add @hookform/resolvers. */
-const resolver: Resolver<FormValues> = async values => {
-  const result = schema.safeParse(values)
-  if (result.success) return { values: result.data, errors: {} }
-  const errors: Record<string, { type: string; message: string }> = {}
-  for (const issue of result.error.issues) {
-    const key = issue.path.join('.')
-    if (!errors[key]) errors[key] = { type: 'validation', message: issue.message }
-  }
-  return { values: {}, errors: errors as never }
+function formatTotal(n: number): string {
+  return new Intl.NumberFormat('en-US').format(n)
 }
 
-type Attachment = {
-  file: File
-  path: string
-  state: 'ready' | 'uploading' | 'done' | 'failed'
-}
-
-function safeName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80)
-}
-
-export function Submit() {
+export function Board() {
+  const { session, profile, role } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { session } = useAuth()
-  const uid = session?.user.id
 
-  const [files, setFiles] = useState<Attachment[]>([])
-  const [fileError, setFileError] = useState('')
-  const [formError, setFormError] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [posted, setPosted] = useState<string | null>(null)
-
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<FormValues>({
-    resolver,
-    defaultValues: { activity_id: '', title: '', occurred_on: today(), details: '', external_url: '' },
+  // Team total — the only point number a member ever sees
+  const totalQuery = useQuery({
+    queryKey: ['team-total'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_team_total')
+      if (error) throw error
+      return (data as number) ?? 0
+    },
   })
 
-  // No points column. Not selected, not received, not renderable.
-  const catalogQuery = useQuery({
-    queryKey: ['activity-catalog'],
+  // Sprint config — for the day counter
+  const configQuery = useQuery({
+    queryKey: ['sprint-config'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('activity_catalog')
-        .select('id, category, label, level, proof_hint, sort_order')
-        .eq('is_active', true)
-        .order('sort_order')
+        .from('sprint_config')
+        .select('sprint_start, total_days')
+        .single()
       if (error) throw error
       return data
     },
-    staleTime: 5 * 60_000,
   })
 
-  const selectedId = watch('activity_id')
-  const detailsValue = watch('details') ?? ''
-  const selected = useMemo(
-    () => catalogQuery.data?.find(a => a.id === selectedId) ?? null,
-    [catalogQuery.data, selectedId],
-  )
+  // Verified feed — no point values in get_board_feed return type
+  const feedQuery = useQuery({
+    queryKey: ['board-feed'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_board_feed', { p_limit: 30 })
+      if (error) throw error
+      return data ?? []
+    },
+  })
 
-  const grouped = useMemo(() => {
-    const out: { key: string; heading: string; items: NonNullable<typeof catalogQuery.data> }[] = []
-    for (const key of CATEGORY_ORDER) {
-      const items = (catalogQuery.data ?? []).filter(a => a.category === key)
-      if (items.length) out.push({ key, heading: CATEGORY_HEADINGS[key] ?? key, items })
-    }
-    return out
-  }, [catalogQuery.data])
+  const sprintInfo = configQuery.data
+    ? computeSprintDay(configQuery.data.sprint_start, configQuery.data.total_days)
+    : null
 
-  function addFiles(incoming: File[]) {
-    setFileError('')
-    const next = [...files]
-    for (const file of incoming) {
-      if (next.length >= 3) {
-        setFileError('Three files is the maximum. Remove one to add another.')
-        break
-      }
-      if (!ACCEPT.includes(file.type)) {
-        setFileError(`${file.name} is not a PNG, JPG, WEBP or PDF. Convert it and try again.`)
-        continue
-      }
-      if (file.size > MAX_BYTES) {
-        setFileError(`${file.name} is over 10 MB. Compress it or screenshot the relevant part.`)
-        continue
-      }
-      if (next.some(a => a.file.name === file.name && a.file.size === file.size)) continue
-      next.push({ file, path: '', state: 'ready' })
-    }
-    setFiles(next)
-  }
+  // My calls — from get_my_submissions (no points in return type)
+  const myQuery = useQuery({
+    queryKey: ['my-submissions'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_my_submissions')
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!session,
+  })
 
-  async function onSubmit(values: FormValues) {
-    if (!uid) return
-    if (files.length === 0) {
-      setFileError('Attach at least one file showing the proof. Core members verify against it.')
-      return
-    }
+  const isCore = role === 'core' || role === 'lead'
 
-    setBusy(true)
-    setFormError('')
-    setFileError('')
-
-    const submissionId = crypto.randomUUID()
-    const uploaded: string[] = []
-
-    const cleanup = async () => {
-      if (uploaded.length) await supabase.storage.from('proofs').remove(uploaded)
-    }
-
-    try {
-      const staged: Attachment[] = files.map(a => ({ ...a, state: 'uploading' as const }))
-      setFiles(staged)
-
-      for (let i = 0; i < staged.length; i++) {
-        const path = `${uid}/${submissionId}/${crypto.randomUUID()}-${safeName(staged[i].file.name)}`
-        const { error } = await supabase.storage
-          .from('proofs')
-          .upload(path, staged[i].file, { contentType: staged[i].file.type, upsert: false })
-
-        if (error) {
-          staged[i] = { ...staged[i], state: 'failed' }
-          setFiles([...staged])
-          await cleanup()
-          setFileError(`${staged[i].file.name} did not upload: ${error.message}. Check your connection and try again.`)
-          setBusy(false)
-          return
-        }
-
-        uploaded.push(path)
-        staged[i] = { ...staged[i], path, state: 'done' }
-        setFiles([...staged])
-      }
-
-      const { error: rpcError } = await supabase.rpc('submit_achievement', {
-        p_id: submissionId,
-        p_activity_id: values.activity_id,
-        p_title: values.title,
-        p_occurred_on: values.occurred_on,
-        p_details: values.details?.trim() || null,
-        p_external_url: values.external_url?.trim() || null,
-        p_proofs: staged.map(a => ({
-          storage_path: a.path,
-          file_name: a.file.name,
-          mime_type: a.file.type,
-          size_bytes: a.file.size,
-        })),
+  // A verify in the booth should move the number on everyone's board without a
+  // refresh. The payload is ignored on purpose — we refetch through the RPCs so
+  // no point value ever arrives over the realtime socket.
+  useEffect(() => {
+    if (!session) return
+    const channel = supabase
+      .channel('board-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'submissions' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['team-total'] })
+        queryClient.invalidateQueries({ queryKey: ['board-feed'] })
+        queryClient.invalidateQueries({ queryKey: ['my-submissions'] })
       })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [session, queryClient])
 
-      if (rpcError) {
-        await cleanup()
-        setFiles(files.map(a => ({ ...a, path: '', state: 'ready' as const })))
-        setFormError(`${rpcError.message}. Nothing was saved, so you can fix it and submit again.`)
-        setBusy(false)
-        return
-      }
-
-      queryClient.invalidateQueries({ queryKey: ['my-submissions'] })
-      setPosted(selected ? `${selected.label}${selected.level ? `, ${selected.level}` : ''}` : values.title)
-    } catch (err) {
-      await cleanup()
-      setFormError(`${err instanceof Error ? err.message : 'The submission failed'}. Nothing was saved. Try again.`)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const topbar = (
-    <div className="flex items-center justify-between w-full">
-      <span className="font-display font-bold text-xl text-chalk tracking-sign uppercase">ECHO</span>
-      <button
-        className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
-        onClick={() => navigate('/')}
-      >
-        Back to the board
-      </button>
-    </div>
-  )
-
-  if (posted) {
-    return (
-      <BoardLayout topbar={topbar}>
-        <BoardPanel>
-          <div className="flex flex-col items-start gap-4 py-4">
-            <SignLabel>In the queue</SignLabel>
-            <h2 className="text-2xl font-display font-bold text-chalk">{posted} is in the queue.</h2>
-            <p className="text-base text-chalk/60 max-w-[50ch]">
-              A core member will check your proof and post it to the board. You can follow it under
-              Your calls. If they need more evidence, it will come back marked Sent back.
-            </p>
-            <div className="flex flex-wrap gap-3 pt-2">
-              <Button onClick={() => navigate('/')}>Back to the board</Button>
-              <Button variant="secondary" onClick={() => window.location.reload()}>
-                Submit another
-              </Button>
-            </div>
-          </div>
-        </BoardPanel>
-      </BoardLayout>
-    )
-  }
+  const feed = feedQuery.data ?? []
+  const mine = myQuery.data ?? []
 
   return (
-    <BoardLayout topbar={topbar}>
+    <BoardLayout
+      topbar={
+        <div className="flex items-center justify-between w-full">
+          <span className="font-display font-bold text-xl text-chalk tracking-sign uppercase">ECHO</span>
+          <div className="flex items-center gap-4">
+            {sprintInfo && (
+              <span className="text-sm text-chalk/60 font-body">
+                Day {sprintInfo.day} of {sprintInfo.total}
+              </span>
+            )}
+            {isCore && (
+              <button
+                className="text-sm text-chalk/80 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+                onClick={() => navigate('/review')}
+              >
+                The Booth
+              </button>
+            )}
+            <button
+              className="text-sm text-chalk/60 hover:text-chalk"
+              onClick={async () => { await supabase.auth.signOut() }}
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      }
+    >
+      {/* The Board — team total */}
+      <BoardPanel>
+        <div className="flex flex-col items-center gap-6 py-4">
+          {/* Total score */}
+          {totalQuery.isLoading ? (
+            <Skeleton variant="total" />
+          ) : totalQuery.isError ? (
+            <ErrorState
+              headline="Could not load the score"
+              body="The board total failed to load. Check your connection."
+              retry={() => totalQuery.refetch()}
+            />
+          ) : (
+            <>
+              <div className="font-display font-bold text-board text-chalk tabular-nums" style={{ fontVariationSettings: "'wdth' 112" }}>
+                {formatTotal(totalQuery.data ?? 0)}
+              </div>
+              <p className="text-xs text-chalk/60 uppercase tracking-sign">Posted to the board</p>
+            </>
+          )}
+
+          {/* Sprint progress meter */}
+          {configQuery.data && sprintInfo && (
+            <div className="w-full max-w-sm">
+              <Meter value={sprintInfo.day} max={sprintInfo.total} label="Sprint progress" />
+            </div>
+          )}
+        </div>
+
+        <Seam />
+
+        {/* Submit CTA */}
+        <div className="pt-4">
+          <Button variant="primary" className="w-full sm:w-auto" onClick={() => navigate('/submit')}>
+            Submit achievement
+          </Button>
+        </div>
+      </BoardPanel>
+
+      {/* ON THE BOARD — verified feed */}
       <BoardPanel padded={false}>
         <div className="px-panel pt-panel pb-2">
-          <SignLabel>Call one in</SignLabel>
-          <h2 className="text-xl font-display font-bold text-chalk mt-2">Submit an achievement</h2>
-          <p className="text-sm text-chalk/60 mt-1">
-            Everything here goes to a core member for verification before it reaches the board.
-          </p>
+          <SignLabel>On the board</SignLabel>
         </div>
         <Seam />
 
-        {catalogQuery.isLoading ? (
-          <div className="p-panel flex flex-col gap-4">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} variant="row" />)}
+        {feedQuery.isLoading ? (
+          <div>
+            {[...Array(5)].map((_, i) => <Skeleton key={i} variant="row" />)}
           </div>
-        ) : catalogQuery.isError ? (
+        ) : feedQuery.isError ? (
           <div className="px-panel py-8">
             <ErrorState
-              headline="Could not load the achievement list"
-              body="The activity catalog failed to load, so there is nothing to pick from yet."
-              retry={() => catalogQuery.refetch()}
+              headline="Could not load the feed"
+              body="The board feed failed to load. Try refreshing."
+              retry={() => feedQuery.refetch()}
             />
           </div>
+        ) : feed.length === 0 ? (
+          <EmptyState
+            headline="The board is empty."
+            body="Be the first to call something in. Submit an achievement and a core member will post it."
+          />
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="p-panel flex flex-col gap-6" noValidate>
-            {formError && (
-              <p className="text-sm text-flare border-hair border-flag rounded-slot px-3 py-2">{formError}</p>
-            )}
-
-            <Field label="What did you do" error={errors.activity_id?.message} htmlFor="activity_id">
-              <Select id="activity_id" {...register('activity_id')} disabled={busy}>
-                <option value="">Pick one</option>
-                {grouped.map(group => (
-                  <optgroup key={group.key} label={group.heading}>
-                    {group.items.map(item => (
-                      <option key={item.id} value={item.id}>
-                        {item.label}{item.level ? ` — ${item.level}` : ''}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </Select>
-            </Field>
-
-            <Field
-              label="Title"
-              help="Name the specific thing. 'Smart India Hackathon 2026', not 'hackathon'."
-              error={errors.title?.message}
-              htmlFor="title"
-            >
-              <Input id="title" maxLength={140} {...register('title')} disabled={busy} />
-            </Field>
-
-            <Field label="Date it happened" error={errors.occurred_on?.message} htmlFor="occurred_on">
-              <Input
-                id="occurred_on"
-                type="date"
-                max={today()}
-                className="tabular-nums"
-                {...register('occurred_on')}
-                disabled={busy}
-              />
-            </Field>
-
-            <Field label="Details (optional)" error={errors.details?.message} htmlFor="details">
-              <Textarea
-                id="details"
-                maxLength={1200}
-                placeholder="Anything a reviewer would need to know."
-                {...register('details')}
-                disabled={busy}
-              />
-              <div className="flex justify-end">
-                <CharCount value={detailsValue} max={1000} />
+          <div>
+            {feed.map((row: any) => (
+              <div key={row.id}>
+                <FeedRow
+                  who={row.member_name}
+                  what={row.activity_label}
+                  level={row.activity_level}
+                  when={row.posted_at ?? row.occurred_on}
+                />
+                <Seam />
               </div>
-            </Field>
+            ))}
+            <p className="px-panel py-3 text-xs text-chalk/60">
+              Showing the last {feed.length} posts
+            </p>
+          </div>
+        )}
+      </BoardPanel>
 
-            <Field
-              label="Link (optional)"
-              help="A public link a reviewer can open: repo, PR, article, result page."
-              error={errors.external_url?.message}
-              htmlFor="external_url"
-            >
-              <Input id="external_url" type="url" placeholder="https://" {...register('external_url')} disabled={busy} />
-            </Field>
+      {/* YOUR CALLS — own submissions, no points */}
+      <BoardPanel padded={false}>
+        <div className="px-panel pt-panel pb-2">
+          <SignLabel>Your calls</SignLabel>
+        </div>
+        <Seam />
 
-            <Seam />
-
-            <Field
-              label="Proof"
-              error={fileError}
-              help={
-                selected?.proof_hint
-                  ? `For this one: ${selected.proof_hint}.`
-                  : 'PNG, JPG, WEBP or PDF. Up to 3 files, 10 MB each.'
-              }
-            >
-              <div className="flex flex-col gap-3">
-                {files.map((a, i) => (
-                  <AttachedFile
-                    key={`${a.file.name}-${i}`}
-                    name={a.file.name}
-                    bytes={a.file.size}
-                    state={a.state}
-                    onRemove={busy ? undefined : () => setFiles(files.filter((_, j) => j !== i))}
-                  />
-                ))}
-                {files.length < 3 && (
-                  <FilePicker
-                    id="proof-files"
-                    accept={ACCEPT_ATTR}
-                    onFiles={addFiles}
-                    disabled={busy}
-                    hint={`${files.length} of 3 attached`}
-                  />
-                )}
+        {myQuery.isLoading ? (
+          <div>
+            {[...Array(3)].map((_, i) => <Skeleton key={i} variant="row" />)}
+          </div>
+        ) : myQuery.isError ? (
+          <div className="px-panel py-8">
+            <ErrorState
+              headline="Could not load your submissions"
+              body="Try refreshing the page."
+              retry={() => myQuery.refetch()}
+            />
+          </div>
+        ) : mine.length === 0 ? (
+          <EmptyState
+            headline="Nothing called in yet."
+            body="Submit an achievement and it will appear here while a core member checks it."
+            action={<Button onClick={() => navigate('/submit')}>Submit achievement</Button>}
+          />
+        ) : (
+          <div>
+            {(mine as any[]).map((row) => (
+              <div key={row.id}>
+                <MyCallRow row={row} onEdit={() => navigate(`/submit?edit=${row.id}`)} />
+                <Seam />
               </div>
-            </Field>
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <Button type="submit" loading={busy} className="w-full sm:w-auto">
-                Send for verification
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={busy}
-                className="w-full sm:w-auto"
-                onClick={() => navigate('/')}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
+            ))}
+          </div>
         )}
       </BoardPanel>
     </BoardLayout>
+  )
+}
+
+
+function MyCallRow({ row, onEdit }: { row: any; onEdit: () => void }) {
+  const [expanded, setExpanded] = useState(true && row.status === 'needs_info')
+  const hasNote = !!row.decision_note
+
+  return (
+    <div>
+      <button
+        className="w-full h-row flex items-center gap-0 hover:bg-lit transition-none text-left"
+        onClick={() => hasNote && setExpanded(!expanded)}
+        aria-expanded={hasNote ? expanded : undefined}
+      >
+        <div className="flex-1 px-4 text-sm text-chalk truncate">
+          {row.activity_label}{row.activity_level ? `, ${row.activity_level}` : ''}
+        </div>
+        <div className="px-4 shrink-0">
+          <StatusPill status={row.status} size="sm" />
+        </div>
+        {hasNote && (
+          <div className="w-8 px-2 text-chalk/40 text-xs shrink-0">
+            {expanded ? '▴' : '▾'}
+          </div>
+        )}
+      </button>
+      {expanded && hasNote && (
+        <div className="bg-recess px-4 py-3 border-t border-seam flex flex-col gap-2">
+          <p className="text-sm text-chalk/70">{row.decision_note}</p>
+          {row.status === 'needs_info' && (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <p className="text-xs text-chalk/60 flex-1">
+                Add what they asked for and it goes back into the queue.
+              </p>
+              <Button variant="secondary" onClick={onEdit} className="w-full sm:w-auto">
+                Send it again
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+/**
+ * / — Team Board
+ *
+ * Data sources:
+ *   - get_team_total() → one integer, the only point figure visible to members
+ *   - sprint_config     → sprint start date and total days (no points)
+ *   - get_board_feed()  → verified items: name, activity, level, date (no points)
+ *
+ * Rules enforced here:
+ *   - Zero point values rendered anywhere on this page except the single team total
+ *   - get_board_feed is called via RPC — never direct select from submissions
+ *   - Sprint day is computed from sprint_config, never hardcoded
+ */
+import { useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../supabase'
+import { useAuth } from '../context/AuthContext'
+import { BoardLayout } from '../components/layout/BoardLayout'
+import { BoardPanel } from '../components/board/BoardPanel'
+import { SignLabel } from '../components/board/SignLabel'
+import { Meter } from '../components/board/Meter'
+import { FeedRow } from '../components/board/FeedRow'
+import { Skeleton } from '../components/primitives/Skeleton'
+import { Seam } from '../components/primitives/Seam'
+import { Button } from '../components/primitives/Button'
+import { EmptyState, ErrorState } from '../components/feedback/EmptyState'
+import { StatusPill } from '../components/status/StatusPill'
+
+function computeSprintDay(sprintStart: string, totalDays: number): { day: number; total: number } {
+  const start = new Date(sprintStart)
+  const today = new Date()
+  // zero out time component for clean day diff
+  start.setHours(0, 0, 0, 0)
+  today.setHours(0, 0, 0, 0)
+  const diffMs = today.getTime() - start.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1
+  const day = Math.min(Math.max(diffDays, 1), totalDays)
+  return { day, total: totalDays }
+}
+
+function formatTotal(n: number): string {
+  return new Intl.NumberFormat('en-US').format(n)
+}
+
+export function Board() {
+  const { session, profile, role } = useAuth()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  // Team total — the only point number a member ever sees
+  const totalQuery = useQuery({
+    queryKey: ['team-total'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_team_total')
+      if (error) throw error
+      return (data as number) ?? 0
+    },
+  })
+
+  // Sprint config — for the day counter
+  const configQuery = useQuery({
+    queryKey: ['sprint-config'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sprint_config')
+        .select('sprint_start, total_days')
+        .single()
+      if (error) throw error
+      return data
+    },
+  })
+
+  // Verified feed — no point values in get_board_feed return type
+  const feedQuery = useQuery({
+    queryKey: ['board-feed'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_board_feed', { p_limit: 30 })
+      if (error) throw error
+      return data ?? []
+    },
+  })
+
+  const sprintInfo = configQuery.data
+    ? computeSprintDay(configQuery.data.sprint_start, configQuery.data.total_days)
+    : null
+
+  // My calls — from get_my_submissions (no points in return type)
+  const myQuery = useQuery({
+    queryKey: ['my-submissions'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_my_submissions')
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!session,
+  })
+
+  const isCore = role === 'core' || role === 'lead'
+
+  // A verify in the booth should move the number on everyone's board without a
+  // refresh. The payload is ignored on purpose — we refetch through the RPCs so
+  // no point value ever arrives over the realtime socket.
+  useEffect(() => {
+    if (!session) return
+    const channel = supabase
+      .channel('board-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'submissions' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['team-total'] })
+        queryClient.invalidateQueries({ queryKey: ['board-feed'] })
+        queryClient.invalidateQueries({ queryKey: ['my-submissions'] })
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [session, queryClient])
+
+  const feed = feedQuery.data ?? []
+  const mine = myQuery.data ?? []
+
+  return (
+    <BoardLayout
+      topbar={
+        <div className="flex items-center justify-between w-full">
+          <span className="font-display font-bold text-xl text-chalk tracking-sign uppercase">ECHO</span>
+          <div className="flex items-center gap-4">
+            {sprintInfo && (
+              <span className="text-sm text-chalk/60 font-body">
+                Day {sprintInfo.day} of {sprintInfo.total}
+              </span>
+            )}
+            {isCore && (
+              <button
+                className="text-sm text-chalk/80 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+                onClick={() => navigate('/review')}
+              >
+                The Booth
+              </button>
+            )}
+            <button
+              className="text-sm text-chalk/60 hover:text-chalk"
+              onClick={async () => { await supabase.auth.signOut() }}
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      }
+    >
+      {/* The Board — team total */}
+      <BoardPanel>
+        <div className="flex flex-col items-center gap-6 py-4">
+          {/* Total score */}
+          {totalQuery.isLoading ? (
+            <Skeleton variant="total" />
+          ) : totalQuery.isError ? (
+            <ErrorState
+              headline="Could not load the score"
+              body="The board total failed to load. Check your connection."
+              retry={() => totalQuery.refetch()}
+            />
+          ) : (
+            <>
+              <div className="font-display font-bold text-board text-chalk tabular-nums" style={{ fontVariationSettings: "'wdth' 112" }}>
+                {formatTotal(totalQuery.data ?? 0)}
+              </div>
+              <p className="text-xs text-chalk/60 uppercase tracking-sign">Posted to the board</p>
+            </>
+          )}
+
+          {/* Sprint progress meter */}
+          {configQuery.data && sprintInfo && (
+            <div className="w-full max-w-sm">
+              <Meter value={sprintInfo.day} max={sprintInfo.total} label="Sprint progress" />
+            </div>
+          )}
+        </div>
+
+        <Seam />
+
+        {/* Submit CTA */}
+        <div className="pt-4">
+          <Button variant="primary" className="w-full sm:w-auto" onClick={() => navigate('/submit')}>
+            Submit achievement
+          </Button>
+        </div>
+      </BoardPanel>
+
+      {/* ON THE BOARD — verified feed */}
+      <BoardPanel padded={false}>
+        <div className="px-panel pt-panel pb-2">
+          <SignLabel>On the board</SignLabel>
+        </div>
+        <Seam />
+
+        {feedQuery.isLoading ? (
+          <div>
+            {[...Array(5)].map((_, i) => <Skeleton key={i} variant="row" />)}
+          </div>
+        ) : feedQuery.isError ? (
+          <div className="px-panel py-8">
+            <ErrorState
+              headline="Could not load the feed"
+              body="The board feed failed to load. Try refreshing."
+              retry={() => feedQuery.refetch()}
+            />
+          </div>
+        ) : feed.length === 0 ? (
+          <EmptyState
+            headline="The board is empty."
+            body="Be the first to call something in. Submit an achievement and a core member will post it."
+          />
+        ) : (
+          <div>
+            {feed.map((row: any) => (
+              <div key={row.id}>
+                <FeedRow
+                  who={row.member_name}
+                  what={row.activity_label}
+                  level={row.activity_level}
+                  when={row.posted_at ?? row.occurred_on}
+                />
+                <Seam />
+              </div>
+            ))}
+            <p className="px-panel py-3 text-xs text-chalk/60">
+              Showing the last {feed.length} posts
+            </p>
+          </div>
+        )}
+      </BoardPanel>
+
+      {/* YOUR CALLS — own submissions, no points */}
+      <BoardPanel padded={false}>
+        <div className="px-panel pt-panel pb-2">
+          <SignLabel>Your calls</SignLabel>
+        </div>
+        <Seam />
+
+        {myQuery.isLoading ? (
+          <div>
+            {[...Array(3)].map((_, i) => <Skeleton key={i} variant="row" />)}
+          </div>
+        ) : myQuery.isError ? (
+          <div className="px-panel py-8">
+            <ErrorState
+              headline="Could not load your submissions"
+              body="Try refreshing the page."
+              retry={() => myQuery.refetch()}
+            />
+          </div>
+        ) : mine.length === 0 ? (
+          <EmptyState
+            headline="Nothing called in yet."
+            body="Submit an achievement and it will appear here while a core member checks it."
+            action={<Button onClick={() => navigate('/submit')}>Submit achievement</Button>}
+          />
+        ) : (
+          <div>
+            {(mine as any[]).map((row) => (
+              <div key={row.id}>
+                <MyCallRow row={row} onEdit={() => navigate(`/submit?edit=${row.id}`)} />
+                <Seam />
+              </div>
+            ))}
+          </div>
+        )}
+      </BoardPanel>
+    </BoardLayout>
+  )
+}
+
+
+function MyCallRow({ row, onEdit }: { row: any; onEdit: () => void }) {
+  const [expanded, setExpanded] = useState(true && row.status === 'needs_info')
+  const hasNote = !!row.decision_note
+
+  return (
+    <div>
+      <button
+        className="w-full h-row flex items-center gap-0 hover:bg-lit transition-none text-left"
+        onClick={() => hasNote && setExpanded(!expanded)}
+        aria-expanded={hasNote ? expanded : undefined}
+      >
+        <div className="flex-1 px-4 text-sm text-chalk truncate">
+          {row.activity_label}{row.activity_level ? `, ${row.activity_level}` : ''}
+        </div>
+        <div className="px-4 shrink-0">
+          <StatusPill status={row.status} size="sm" />
+        </div>
+        {hasNote && (
+          <div className="w-8 px-2 text-chalk/40 text-xs shrink-0">
+            {expanded ? '▴' : '▾'}
+          </div>
+        )}
+      </button>
+      {expanded && hasNote && (
+        <div className="bg-recess px-4 py-3 border-t border-seam flex flex-col gap-2">
+          <p className="text-sm text-chalk/70">{row.decision_note}</p>
+          {row.status === 'needs_info' && (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <p className="text-xs text-chalk/60 flex-1">
+                Add what they asked for and it goes back into the queue.
+              </p>
+              <Button variant="secondary" onClick={onEdit} className="w-full sm:w-auto">
+                Send it again
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
