@@ -11,7 +11,8 @@
  *   - get_board_feed is called via RPC — never direct select from submissions
  *   - Sprint day is computed from sprint_config, never hardcoded
  */
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { useAuth } from '../context/AuthContext'
@@ -24,6 +25,7 @@ import { Skeleton } from '../components/primitives/Skeleton'
 import { Seam } from '../components/primitives/Seam'
 import { Button } from '../components/primitives/Button'
 import { EmptyState, ErrorState } from '../components/feedback/EmptyState'
+import { StatusPill } from '../components/status/StatusPill'
 
 function computeSprintDay(sprintStart: string, totalDays: number): { day: number; total: number } {
   const start = new Date(sprintStart)
@@ -44,6 +46,7 @@ function formatTotal(n: number): string {
 export function Board() {
   const { session, profile, role } = useAuth()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   // Team total — the only point number a member ever sees
   const totalQuery = useQuery({
@@ -95,6 +98,25 @@ export function Board() {
 
   const isCore = role === 'core' || role === 'lead'
 
+  // A verify in the booth should move the number on everyone's board without a
+  // refresh. The payload is ignored on purpose — we refetch through the RPCs so
+  // no point value ever arrives over the realtime socket.
+  useEffect(() => {
+    if (!session) return
+    const channel = supabase
+      .channel('board-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'submissions' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['team-total'] })
+        queryClient.invalidateQueries({ queryKey: ['board-feed'] })
+        queryClient.invalidateQueries({ queryKey: ['my-submissions'] })
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [session, queryClient])
+
+  const feed = feedQuery.data ?? []
+  const mine = myQuery.data ?? []
+
   return (
     <BoardLayout
       topbar={
@@ -107,7 +129,12 @@ export function Board() {
               </span>
             )}
             {isCore && (
-              <a href="/review" className="text-sm text-chalk/80 hover:text-chalk underline">Booth</a>
+              <button
+                className="text-sm text-chalk/80 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+                onClick={() => navigate('/review')}
+              >
+                The Booth
+              </button>
             )}
             <button
               className="text-sm text-chalk/60 hover:text-chalk"
@@ -177,14 +204,14 @@ export function Board() {
               retry={() => feedQuery.refetch()}
             />
           </div>
-        ) : feedQuery.data.length === 0 ? (
+        ) : feed.length === 0 ? (
           <EmptyState
             headline="The board is empty."
             body="Be the first to call something in. Submit an achievement and a core member will post it."
           />
         ) : (
           <div>
-            {feedQuery.data.map((row: any) => (
+            {feed.map((row: any) => (
               <div key={row.id}>
                 <FeedRow
                   who={row.member_name}
@@ -196,7 +223,7 @@ export function Board() {
               </div>
             ))}
             <p className="px-panel py-3 text-xs text-chalk/60">
-              Showing the last {feedQuery.data.length} posts
+              Showing the last {feed.length} posts
             </p>
           </div>
         )}
@@ -221,14 +248,15 @@ export function Board() {
               retry={() => myQuery.refetch()}
             />
           </div>
-        ) : myQuery.data.length === 0 ? (
+        ) : mine.length === 0 ? (
           <EmptyState
             headline="Nothing called in yet."
-            body="Submit an achievement and it will appear here."
+            body="Submit an achievement and it will appear here while a core member checks it."
+            action={<Button onClick={() => navigate('/submit')}>Submit achievement</Button>}
           />
         ) : (
           <div>
-            {(myQuery.data as any[]).map((row) => (
+            {(mine as any[]).map((row) => (
               <div key={row.id}>
                 <MyCallRow row={row} />
                 <Seam />
@@ -241,8 +269,6 @@ export function Board() {
   )
 }
 
-import { useState } from 'react'
-import { StatusPill } from '../components/status/StatusPill'
 
 function MyCallRow({ row }: { row: any }) {
   const [expanded, setExpanded] = useState(false)
@@ -268,8 +294,13 @@ function MyCallRow({ row }: { row: any }) {
         )}
       </button>
       {expanded && hasNote && (
-        <div className="bg-recess px-4 py-3 text-sm text-chalk/70 border-t border-seam">
-          {row.decision_note}
+        <div className="bg-recess px-4 py-3 border-t border-seam flex flex-col gap-2">
+          <p className="text-sm text-chalk/70">{row.decision_note}</p>
+          {row.status === 'needs_info' && (
+            <p className="text-xs text-chalk/60">
+              Send it again with the missing evidence and it goes back into the queue.
+            </p>
+          )}
         </div>
       )}
     </div>

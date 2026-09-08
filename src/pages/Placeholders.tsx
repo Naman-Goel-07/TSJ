@@ -8,14 +8,6 @@ export function Submit() {
   )
 }
 
-export function Review() {
-  return (
-    <div className="min-h-screen bg-recess flex items-center justify-center">
-      <p className="text-chalk">The Booth — coming in step 7</p>
-    </div>
-  )
-}
-
 export function Admin() {
   return (
     <div className="min-h-screen bg-recess flex items-center justify-center">
