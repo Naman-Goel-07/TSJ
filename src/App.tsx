@@ -19,6 +19,7 @@ import { Onboarding } from './pages/Onboarding'
 import { Board } from './pages/Board'
 import { Submit } from './pages/Submit'
 import { Review } from './pages/Review'
+import { RollCall } from './pages/RollCall'
 import { Admin, NotFound } from './pages/Placeholders'
 
 const queryClient = new QueryClient({
@@ -71,6 +72,12 @@ export function App() {
 
             {/* The roadmap calls this /booth. Both paths reach the same screen. */}
             <Route path="/booth" element={<Navigate to="/review" replace />} />
+
+            <Route path="/booth/meetups" element={
+              <RequireRole minRole="core">
+                <RollCall />
+              </RequireRole>
+            } />
 
             <Route path="/admin" element={
               <RequireRole minRole="lead">

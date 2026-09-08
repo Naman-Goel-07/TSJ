@@ -42,6 +42,23 @@ type QueueItem = {
   is_variable: boolean
 }
 
+type PostedItem = {
+  id: string
+  full_name: string
+  department: string
+  label: string
+  level: string | null
+  title: string
+  occurred_on: string
+  status: 'verified' | 'revoked'
+  decided_at: string | null
+  decision_note: string | null
+  awarded_points: number | null
+  penalty_points: number
+  net_points: number | null
+  meetup_id: string | null
+}
+
 type Decision = 'verified' | 'needs_info' | 'rejected'
 
 function formatDate(iso: string): string {
@@ -60,6 +77,7 @@ export function Review() {
   const queryClient = useQueryClient()
   const { role } = useAuth()
   const isLead = role === 'lead'
+  const [tab, setTab] = useState<'waiting' | 'posted'>('waiting')
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [note, setNote] = useState('')
@@ -182,7 +200,7 @@ export function Review() {
         setShortcutsOpen(false)
         return
       }
-      if (typing) return
+      if (typing || tab !== 'waiting') return
 
       if (e.key === 'j') { e.preventDefault(); move(1) }
       else if (e.key === 'k') { e.preventDefault(); move(-1) }
@@ -193,7 +211,7 @@ export function Review() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [move, submitDecision])
+  }, [move, submitDecision, tab])
 
   const topbar = (
     <div className="flex items-center justify-between w-full gap-4">
@@ -210,6 +228,12 @@ export function Review() {
         </span>
         <button
           className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+          onClick={() => navigate('/booth/meetups')}
+        >
+          Roll call
+        </button>
+        <button
+          className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
           onClick={() => navigate('/')}
         >
           Back to the board
@@ -217,6 +241,31 @@ export function Review() {
       </div>
     </div>
   )
+
+  const tabs = (
+    <div className="flex items-center gap-1 border-b border-seam">
+      {([['waiting', 'Waiting'], ['posted', 'On the board']] as const).map(([key, text]) => (
+        <button
+          key={key}
+          onClick={() => setTab(key)}
+          aria-current={tab === key}
+          className={`h-11 px-4 text-sm font-semibold border-b-2 focus:outline-none focus:shadow-ring
+            ${tab === key ? 'border-b-lamp text-chalk' : 'border-b-transparent text-chalk/60 hover:text-chalk'}`}
+        >
+          {text}
+        </button>
+      ))}
+    </div>
+  )
+
+  if (tab === 'posted') {
+    return (
+      <BoardLayout topbar={topbar}>
+        {tabs}
+        <PostedPanel canRevoke={role === 'core' || role === 'lead'} />
+      </BoardLayout>
+    )
+  }
 
   if (queueQuery.isLoading) {
     return (
@@ -246,6 +295,7 @@ export function Review() {
 
   return (
     <BoardLayout topbar={topbar}>
+      {tabs}
       {queue.length === 0 ? (
         <BoardPanel>
           <EmptyState
@@ -488,5 +538,161 @@ export function Review() {
         </div>
       )}
     </BoardLayout>
+  )
+}
+
+/**
+ * On the board — everything already posted, plus anything pulled back off.
+ * Pulling calls revoke_submission(), which applies the 90% penalty in the
+ * database. This component never computes or writes a point value.
+ */
+function PostedPanel({ canRevoke }: { canRevoke: boolean }) {
+  const queryClient = useQueryClient()
+  const [openId, setOpenId] = useState<string | null>(null)
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState('')
+
+  const postedQuery = useQuery({
+    queryKey: ['posted-submissions'],
+    queryFn: async () => {
+      const { data, error: rpcError } = await supabase.rpc('get_posted_submissions', { p_limit: 100 })
+      if (rpcError) throw rpcError
+      return (data ?? []) as unknown as PostedItem[]
+    },
+  })
+
+  const pull = useMutation({
+    mutationFn: async (id: string) => {
+      const { error: rpcError } = await supabase.rpc('revoke_submission', {
+        p_submission_id: id,
+        p_reason: reason.trim(),
+      })
+      if (rpcError) throw rpcError
+    },
+    onSuccess: () => {
+      setOpenId(null)
+      setReason('')
+      setError('')
+      queryClient.invalidateQueries({ queryKey: ['posted-submissions'] })
+      queryClient.invalidateQueries({ queryKey: ['team-total'] })
+      queryClient.invalidateQueries({ queryKey: ['board-feed'] })
+    },
+    onError: (err: Error) => setError(err.message),
+  })
+
+  const items = postedQuery.data ?? []
+
+  if (postedQuery.isLoading) {
+    return (
+      <BoardPanel>
+        <div className="flex flex-col gap-4">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} variant="row" />)}
+        </div>
+      </BoardPanel>
+    )
+  }
+
+  if (postedQuery.isError) {
+    return (
+      <BoardPanel>
+        <ErrorState
+          headline="Could not load posted submissions"
+          body="get_posted_submissions failed. Check that migration 0005 ran."
+          retry={() => postedQuery.refetch()}
+        />
+      </BoardPanel>
+    )
+  }
+
+  if (items.length === 0) {
+    return (
+      <BoardPanel>
+        <EmptyState
+          headline="Nothing on the board yet."
+          body="Verify something in the Waiting tab and it shows up here."
+        />
+      </BoardPanel>
+    )
+  }
+
+  return (
+    <BoardPanel padded={false}>
+      <div className="px-panel pt-panel pb-2">
+        <SignLabel>Posted</SignLabel>
+        <p className="text-sm text-chalk/60 mt-2">
+          Pulling a submission leaves 10% of its value on the board, which is what the
+          rules say. It is not deleted and the member sees the reason.
+        </p>
+      </div>
+      <Seam />
+
+      {items.map(item => (
+        <div key={item.id} className="border-b border-seam">
+          <div className="px-4 py-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <span className="text-sm font-medium text-chalk">{item.full_name}</span>
+            <span className="flex-1 min-w-0 text-sm text-chalk/70 truncate">
+              {item.label}{item.level ? ` — ${item.level}` : ''}
+            </span>
+            <span className="font-display font-bold text-chalk tabular-nums">
+              {item.net_points ?? 0}
+            </span>
+            <StatusPill status={item.status} size="sm" />
+            {canRevoke && item.status === 'verified' && (
+              <button
+                onClick={() => { setOpenId(openId === item.id ? null : item.id); setReason(''); setError('') }}
+                className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+              >
+                {openId === item.id ? 'Keep it' : 'Pull from board'}
+              </button>
+            )}
+          </div>
+
+          <div className="px-4 pb-3 text-xs text-chalk/60">
+            {item.title}
+            {item.status === 'revoked' && item.decision_note && (
+              <span className="block text-flare mt-1">Pulled: {item.decision_note}</span>
+            )}
+          </div>
+
+          {openId === item.id && (
+            <div className="bg-recess px-4 py-4 flex flex-col gap-3 border-t border-seam">
+              <Field
+                label="Why this is being pulled"
+                htmlFor={`reason-${item.id}`}
+                help={`${item.awarded_points ?? 0} awarded, so ${Math.round((item.awarded_points ?? 0) * 0.9)} comes off and ${(item.awarded_points ?? 0) - Math.round((item.awarded_points ?? 0) * 0.9)} stays.`}
+              >
+                <Textarea
+                  id={`reason-${item.id}`}
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                  placeholder="The certificate belongs to a different event."
+                  disabled={pull.isPending}
+                />
+              </Field>
+              {error && <p className="text-sm text-flare">{error}</p>}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  variant="destructive"
+                  loading={pull.isPending}
+                  disabled={!reason.trim()}
+                  onClick={() => pull.mutate(item.id)}
+                  className="w-full sm:w-auto"
+                >
+                  Pull from board
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={pull.isPending}
+                  onClick={() => { setOpenId(null); setReason('') }}
+                  className="w-full sm:w-auto"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </BoardPanel>
   )
 }

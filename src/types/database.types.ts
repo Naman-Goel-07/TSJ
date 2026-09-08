@@ -392,6 +392,29 @@ export interface Database {
         Args: { p_submission_id: string; p_reason: string }
         Returns: undefined
       }
+      get_meetup_roster: {
+        Args: { p_meetup_id?: string | null }
+        Returns: {
+          id: string
+          full_name: string
+          department: string
+          present: boolean
+        }[]
+      }
+      get_meetups: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          held_on: string
+          title: string
+          present_count: number
+          points_posted: number
+        }[]
+      }
+      get_posted_submissions: {
+        Args: { p_limit?: number }
+        Returns: Json[]
+      }
       record_meetup_attendance: {
         Args: { p_meetup_id: string; p_member_ids: string[] }
         Returns: number
