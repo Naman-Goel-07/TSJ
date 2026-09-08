@@ -19,6 +19,7 @@ interface AuthContextValue {
   role: AppRole
   loading: boolean
   refreshSession: () => Promise<void>
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -27,12 +28,27 @@ const AuthContext = createContext<AuthContextValue>({
   role: 'member',
   loading: true,
   refreshSession: async () => {},
+  refreshProfile: async () => {},
 })
 
+function decodeJwtPayload(token: string): Record<string, any> | null {
+  try {
+    const part = token.split('.')[1]
+    if (!part) return null
+    const base64 = part.replace(/-/g, '+').replace(/_/g, '/')
+    const binary = atob(base64)
+    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0))
+    return JSON.parse(new TextDecoder().decode(bytes))
+  } catch {
+    return null
+  }
+}
+
 function getRoleFromSession(session: Session | null): AppRole {
-  if (!session) return 'member'
-  // The custom_access_token_hook injects user_role into the JWT claims
-  const raw = (session.user as any).user_role ?? null
+  if (!session?.access_token) return 'member'
+  // custom_access_token_hook writes user_role into the ACCESS TOKEN claims.
+  // It is not present on session.user, so the token has to be decoded.
+  const raw = decodeJwtPayload(session.access_token)?.user_role
   if (raw === 'lead') return 'lead'
   if (raw === 'core') return 'core'
   return 'member'
@@ -44,12 +60,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   async function fetchProfile(userId: string) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .maybeSingle()
+    if (error) console.error('[auth] could not read profile:', error.message)
     setProfile(data)
+  }
+
+  async function refreshProfile() {
+    const { data } = await supabase.auth.getSession()
+    if (data.session) await fetchProfile(data.session.user.id)
   }
 
   async function refreshSession() {
@@ -84,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const role = getRoleFromSession(session)
 
   return (
-    <AuthContext.Provider value={{ session, profile, role, loading, refreshSession }}>
+    <AuthContext.Provider value={{ session, profile, role, loading, refreshSession, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

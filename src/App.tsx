@@ -17,7 +17,8 @@ import { RequireAuth, RequireProfile, RequireRole } from './guards/RouteGuards'
 import { Login } from './pages/Login'
 import { Onboarding } from './pages/Onboarding'
 import { Board } from './pages/Board'
-import { Submit, Review, Admin, NotFound } from './pages/Placeholders'
+import { Submit } from './pages/Submit'
+import { Review, Admin, NotFound } from './pages/Placeholders'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -86,5 +87,5 @@ function OnboardingGate() {
   const { session, profile, loading } = useAuth()
   if (loading) return null
   if (profile) return <Navigate to="/" replace />
-  return <Onboarding session={session} />
+  return <Onboarding />
 }

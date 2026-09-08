@@ -31,6 +31,7 @@ export interface Database {
           color?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -63,6 +64,7 @@ export interface Database {
           is_active?: boolean
           created_at?: string
         }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -83,6 +85,7 @@ export interface Database {
           granted_by?: string | null
           granted_at?: string
         }
+        Relationships: []
       }
       role_permissions: {
         Row: {
@@ -100,6 +103,7 @@ export interface Database {
           role?: 'member' | 'core' | 'lead'
           permission?: 'submissions.verify' | 'submissions.revoke' | 'submissions.override_points' | 'rules.edit' | 'roles.manage' | 'export.run' | 'members.manage' | 'meetups.manage'
         }
+        Relationships: []
       }
       activity_catalog: {
         Row: {
@@ -144,6 +148,7 @@ export interface Database {
           is_active?: boolean
           sort_order?: number
         }
+        Relationships: []
       }
       submissions: {
         Row: {
@@ -164,6 +169,7 @@ export interface Database {
           override_reason: string | null
           penalty_points: number
           net_points: number | null
+          meetup_id: string | null
         }
         Insert: {
           id?: string
@@ -183,6 +189,7 @@ export interface Database {
           override_reason?: string | null
           penalty_points?: number
           net_points?: number | null
+          meetup_id?: string | null
         }
         Update: {
           id?: string
@@ -202,7 +209,9 @@ export interface Database {
           override_reason?: string | null
           penalty_points?: number
           net_points?: number | null
+          meetup_id?: string | null
         }
+        Relationships: []
       }
       submission_proofs: {
         Row: {
@@ -232,6 +241,7 @@ export interface Database {
           size_bytes?: number
           uploaded_at?: string
         }
+        Relationships: []
       }
       meetups: {
         Row: {
@@ -255,6 +265,7 @@ export interface Database {
           recorded_by?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       audit_log: {
         Row: {
@@ -287,6 +298,7 @@ export interface Database {
           after?: Json | null
           at?: string
         }
+        Relationships: []
       }
       sprint_config: {
         Row: {
@@ -304,6 +316,7 @@ export interface Database {
           sprint_start?: string
           total_days?: number
         }
+        Relationships: []
       }
     }
     Views: {
@@ -341,6 +354,46 @@ export interface Database {
       }
       get_team_total: {
         Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_submission_proofs: {
+        Args: { p_submission_id: string }
+        Returns: {
+          id: string
+          storage_path: string
+          file_name: string
+          mime_type: string
+          size_bytes: number
+        }[]
+      }
+      submit_achievement: {
+        Args: {
+          p_id: string
+          p_activity_id: string
+          p_title: string
+          p_occurred_on: string
+          p_details?: string | null
+          p_external_url?: string | null
+          p_proofs?: Json
+        }
+        Returns: string
+      }
+      decide_submission: {
+        Args: {
+          p_submission_id: string
+          p_decision: 'verified' | 'rejected' | 'needs_info'
+          p_note?: string | null
+          p_override_points?: number | null
+          p_override_reason?: string | null
+        }
+        Returns: undefined
+      }
+      revoke_submission: {
+        Args: { p_submission_id: string; p_reason: string }
+        Returns: undefined
+      }
+      record_meetup_attendance: {
+        Args: { p_meetup_id: string; p_member_ids: string[] }
         Returns: number
       }
     }
