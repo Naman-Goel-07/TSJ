@@ -24,6 +24,7 @@ import { StatusPill } from '../components/status/StatusPill'
 import { EmptyState, ErrorState } from '../components/feedback/EmptyState'
 import { Field, Input, Textarea } from '../components/primitives/Field'
 import { ProofViewer } from '../components/booth/ProofViewer'
+import { TextButton, SelectRow, Segmented } from '../components/primitives/Controls'
 
 type QueueItem = {
   id: string
@@ -226,35 +227,31 @@ export function Review() {
         <span className="text-sm text-chalk/60 hidden sm:inline">
           <span className="tabular-nums text-chalk">{sentBackCount}</span> sent back
         </span>
-        <button
-          className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+        <TextButton
           onClick={() => navigate('/booth/meetups')}
         >
           Roll call
-        </button>
-        <button
-          className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+        </TextButton>
+        <TextButton
           onClick={() => navigate('/')}
         >
           Back to the board
-        </button>
+        </TextButton>
       </div>
     </div>
   )
 
   const tabs = (
-    <div className="flex items-center gap-1 border-b border-seam">
-      {([['waiting', 'Waiting'], ['posted', 'On the board']] as const).map(([key, text]) => (
-        <button
-          key={key}
-          onClick={() => setTab(key)}
-          aria-current={tab === key}
-          className={`h-11 px-4 text-sm font-semibold border-b-2 focus:outline-none focus:shadow-ring
-            ${tab === key ? 'border-b-lamp text-chalk' : 'border-b-transparent text-chalk/60 hover:text-chalk'}`}
-        >
-          {text}
-        </button>
-      ))}
+    <div className="flex items-center">
+      <Segmented
+        label="Queue view"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: 'waiting' as const, label: 'Waiting' },
+          { value: 'posted' as const, label: 'On the board' },
+        ]}
+      />
     </div>
   )
 
@@ -317,12 +314,10 @@ export function Review() {
                 {queue.map(item => {
                   const active = item.id === selectedId
                   return (
-                    <button
+                    <SelectRow
                       key={item.id}
+                      selected={active}
                       onClick={() => setSelectedId(item.id)}
-                      aria-current={active}
-                      className={`w-full text-left px-4 py-3 border-b border-seam border-l-4 focus:outline-none focus:shadow-ring
-                        ${active ? 'border-l-lamp bg-lit' : 'border-l-transparent hover:bg-lit'}`}
                     >
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="text-sm font-medium text-chalk truncate">{item.full_name}</span>
@@ -336,7 +331,7 @@ export function Review() {
                       {item.status === 'needs_info' && (
                         <div className="mt-1"><StatusPill status="needs_info" size="sm" /></div>
                       )}
-                    </button>
+                    </SelectRow>
                   )
                 })}
               </div>
@@ -377,7 +372,7 @@ export function Review() {
                           href={selected.external_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-sm text-lamp underline break-all focus:outline-none focus:shadow-ring rounded-slot"
+                          className="text-sm text-lamp hover:text-chalk underline decoration-lamp/40 underline-offset-4 break-all focus:outline-none focus:shadow-ring rounded-slot"
                         >
                           {selected.external_url}
                         </a>
@@ -403,13 +398,12 @@ export function Review() {
                           : <>Catalog value <span className="font-display font-bold tabular-nums">{selected.catalog_points ?? 0}</span> points</>}
                       </span>
                       {isLead && !selected.is_variable && (
-                        <button
+                        <TextButton
                           type="button"
                           onClick={() => setOverrideOpen(v => !v)}
-                          className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
-                        >
+        >
                           {overrideOpen ? 'Use the catalog value' : 'Override the value'}
-                        </button>
+                        </TextButton>
                       )}
                     </div>
 
@@ -638,12 +632,11 @@ function PostedPanel({ canRevoke }: { canRevoke: boolean }) {
             </span>
             <StatusPill status={item.status} size="sm" />
             {canRevoke && item.status === 'verified' && (
-              <button
+              <TextButton
                 onClick={() => { setOpenId(openId === item.id ? null : item.id); setReason(''); setError('') }}
-                className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
-              >
+        >
                 {openId === item.id ? 'Keep it' : 'Pull from board'}
-              </button>
+              </TextButton>
             )}
           </div>
 

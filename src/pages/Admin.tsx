@@ -20,6 +20,7 @@ import { Button } from '../components/primitives/Button'
 import { Skeleton } from '../components/primitives/Skeleton'
 import { EmptyState, ErrorState } from '../components/feedback/EmptyState'
 import { Field, Input, Select } from '../components/primitives/Field'
+import { TextButton } from '../components/primitives/Controls'
 
 type AppRole = 'member' | 'core' | 'lead'
 
@@ -154,24 +155,21 @@ export function Admin() {
         <span className="text-sm text-chalk/60 truncate">Admin</span>
       </div>
       <div className="flex items-center gap-4 shrink-0">
-        <button
-          className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+        <TextButton
           onClick={() => navigate('/booth/export')}
         >
           Export
-        </button>
-        <button
-          className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+        </TextButton>
+        <TextButton
           onClick={() => navigate('/review')}
         >
           The Booth
-        </button>
-        <button
-          className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+        </TextButton>
+        <TextButton
           onClick={() => navigate('/')}
         >
           Back to the board
-        </button>
+        </TextButton>
       </div>
     </div>
   )
@@ -251,14 +249,13 @@ export function Admin() {
                   </Select>
                 </div>
 
-                <button
+                <TextButton
                   onClick={() => toggleActive.mutate({ id: m.id, active: !m.is_active })}
                   disabled={toggleActive.isPending}
-                  className="text-sm text-chalk/60 hover:text-chalk underline shrink-0
-                             focus:outline-none focus:shadow-ring rounded-slot px-1"
-                >
+                  className="shrink-0"
+        >
                   {m.is_active ? 'Take off roster' : 'Put back on'}
-                </button>
+                </TextButton>
               </div>
             ))}
             <div className="px-panel py-4 flex flex-col gap-1">

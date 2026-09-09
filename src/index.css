@@ -17,8 +17,7 @@
   }
 
   /* Archivo is variable on both axes. Pin the width so the wordmark and the
-     board total stay wide at every size — the default instance is too narrow
-     to read as a scoreboard. */
+     board total stay wide at every size. */
   .font-display { font-variation-settings: 'wdth' 118; }
 
   ::selection { @apply bg-lamp text-chalk; }
@@ -28,6 +27,62 @@
 }
 
 @layer components {
+
+  /* ══ THE ECHO ═══════════════════════════════════════════════════════════
+     A press emits the control's own silhouette three times, each return
+     weaker and further out, with silence between them.
+
+     Box-shadow spread rather than transform: scale. A scaled pill fattens its
+     corner radius as it grows and stops being the same shape — the one thing
+     an echo must not do. Spread keeps the silhouette exact at any radius, and
+     it never triggers layout on the button's children.
+
+     --echo is set inline by each control as an "R G B" triple, so a
+     destructive press returns in warm red and a primary press in rose without
+     a second set of keyframes.                                              */
+
+  .echo-host { position: relative; }
+
+  .echo-wave {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    animation: echoOut 820ms cubic-bezier(0.22, 0.7, 0.24, 1) forwards;
+  }
+
+  @keyframes echoOut {
+    0%   { box-shadow: 0 0 0 0    rgb(var(--echo) / 0.50); }
+    70%  { box-shadow: 0 0 0 14px rgb(var(--echo) / 0.05); }
+    100% { box-shadow: 0 0 0 20px rgb(var(--echo) / 0);    }
+  }
+
+  /* A full-width row cannot throw a 20px ring without washing over the row
+     beneath it, so list selections echo at half the radius. */
+  .echo-wave--tight { animation-name: echoOutTight; animation-duration: 620ms; }
+
+  @keyframes echoOutTight {
+    0%   { box-shadow: inset 0 0 0 0   rgb(var(--echo) / 0.28); }
+    70%  { box-shadow: inset 0 0 0 6px rgb(var(--echo) / 0.04); }
+    100% { box-shadow: inset 0 0 0 9px rgb(var(--echo) / 0);    }
+  }
+
+  /* The resting ring, primary control only. The dead interval from 45% to the
+     end is the point: a pulse with no silence between beats is a spinner. */
+  .echo-rest {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    animation: echoRest 4s cubic-bezier(0.22, 0.7, 0.24, 1) infinite;
+  }
+
+  @keyframes echoRest {
+    0%   { box-shadow: 0 0 0 0    rgb(var(--echo) / 0.26); }
+    45%  { box-shadow: 0 0 0 12px rgb(var(--echo) / 0);    }
+    100% { box-shadow: 0 0 0 12px rgb(var(--echo) / 0);    }
+  }
+
   /* ── instrumentation voice ─────────────────────────────────────────────
      Every label, button, status reading and timestamp. If a person scans it
      rather than reads it, it is a .label.                                   */
@@ -36,7 +91,7 @@
   }
 
   /* ── the void ──────────────────────────────────────────────────────────
-     Two layers under everything: drifting particulate (canvas, see
+     Two layers under everything: drifting particulate (canvas, in
      components/signal) and a static bloom. The bloom is what stops the page
      reading as flat #000 in a photograph, which matters for a demo.         */
   .haze {
@@ -61,9 +116,7 @@
 
   /* ── transmitted type ──────────────────────────────────────────────────
      Four stacked copies of the same glyphs: rose behind and left, cyan behind
-     and right, white on top, and a line grid that multiplies over all of it.
-     Utility classes cannot express this, so it lives here and ships as the
-     <Wordmark> component.                                                    */
+     and right, white on top, and a line grid that multiplies over all of it. */
   .wm { @apply relative font-display font-black uppercase; }
   .wm-layer { @apply absolute inset-0 z-[1]; }
   .wm-rose {
@@ -98,8 +151,8 @@
     animation: scanRoll 9s linear infinite;
   }
 
-  /* The interruption. Fires on an irregular interval — a glitch on a metronome
-     stops reading as a fault and starts reading as decoration. */
+  /* Fires on an irregular interval — a glitch on a metronome stops reading as
+     a fault and starts reading as decoration. */
   .wm.is-glitch .wm-rose { transform: translate3d(-11px, -3px, 0); opacity: 0.95; }
   .wm.is-glitch .wm-cyan { transform: translate3d(9px, 3px, 0);   opacity: 0.85; }
   .wm.is-glitch .wm-top  { animation: wmTear 0.22s steps(2, end) 2; }
@@ -137,7 +190,12 @@
   .led-out    { background: #4A4A57; }
 }
 
+/* Every ring is removed, not merely shortened — a 0.01ms echo is a flicker.
+   The press still lights the border and still moves a pixel, so it is never
+   silent. */
 @media (prefers-reduced-motion: reduce) {
+  .echo-wave, .echo-rest { display: none !important; }
+
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

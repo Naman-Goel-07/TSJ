@@ -20,6 +20,7 @@ import { Button } from '../components/primitives/Button'
 import { Skeleton } from '../components/primitives/Skeleton'
 import { EmptyState, ErrorState } from '../components/feedback/EmptyState'
 import { Field, Input } from '../components/primitives/Field'
+import { TextButton, SelectRow } from '../components/primitives/Controls'
 
 const POINTS_PER_MEMBER = 5
 
@@ -153,18 +154,16 @@ export function RollCall() {
         <span className="text-sm text-chalk/60 truncate">Roll call</span>
       </div>
       <div className="flex items-center gap-4 shrink-0">
-        <button
-          className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+        <TextButton
           onClick={() => navigate('/review')}
         >
           The Booth
-        </button>
-        <button
-          className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+        </TextButton>
+        <TextButton
           onClick={() => navigate('/')}
         >
           Back to the board
-        </button>
+        </TextButton>
       </div>
     </div>
   )
@@ -177,12 +176,11 @@ export function RollCall() {
       <BoardPanel padded={false}>
         <div className="px-panel pt-panel pb-2 flex items-center justify-between gap-4">
           <SignLabel>Meetups</SignLabel>
-          <button
-            className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+          <TextButton
             onClick={() => { setCreating(v => !v); setError('') }}
-          >
+        >
             {creating ? 'Cancel' : 'New meetup'}
-          </button>
+          </TextButton>
         </div>
         <Seam />
 
@@ -234,12 +232,10 @@ export function RollCall() {
             {(meetupsQuery.data ?? []).map(m => {
               const active = m.id === activeId
               return (
-                <button
+                <SelectRow
                   key={m.id}
+                  selected={active}
                   onClick={() => openMeetup(m.id)}
-                  aria-current={active}
-                  className={`w-full text-left px-4 py-3 border-b border-seam border-l-4 focus:outline-none focus:shadow-ring
-                    ${active ? 'border-l-lamp bg-lit' : 'border-l-transparent hover:bg-lit'}`}
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="text-sm font-medium text-chalk">{m.title}</span>
@@ -248,7 +244,7 @@ export function RollCall() {
                   <div className="text-xs text-chalk/60 mt-1 tabular-nums">
                     {m.present_count} present, {m.points_posted} points on the board
                   </div>
-                </button>
+                </SelectRow>
               )
             })}
           </div>

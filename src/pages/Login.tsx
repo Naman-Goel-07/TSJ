@@ -30,13 +30,15 @@
  * see the form with a "confirmed, now sign in" notice instead of a dead end.
  */
 import { useEffect, useState } from 'react'
-import type { FormEvent, ReactNode } from 'react'
+import type { FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { PlainLayout } from '../components/layout/PlainLayout'
 import { BoardPanel } from '../components/board/BoardPanel'
 import { Field, Input } from '../components/primitives/Field'
 import { Button } from '../components/primitives/Button'
+import { TextButton } from '../components/primitives/Controls'
+import { Notice } from '../components/feedback/Notice'
 
 /** Supabase rate-limits confirmation mail per address. Match it in the UI. */
 const RESEND_COOLDOWN_SECONDS = 60
@@ -200,11 +202,9 @@ export function Login() {
 
   if (stage === 'check-email') {
     return (
-      <PlainLayout>
+      <PlainLayout eyebrow="Awaiting confirmation">
         <BoardPanel>
           <div className="flex flex-col gap-4">
-            <div className="w-16 h-10 bg-recess border-hair border-seam rounded-slot shadow-slot shadow-lip" />
-
             <div>
               <h2 className="font-display text-lg font-bold text-chalk">Check your inbox</h2>
               <p className="mt-2 text-sm text-chalk/70">
@@ -224,10 +224,11 @@ export function Login() {
                 disabled={cooldown > 0}
                 loading={loading}
                 loadingLabel="Sending..."
+                className="w-full"
               >
                 {cooldown > 0 ? `Resend in ${cooldown}s` : 'Send the link again'}
               </Button>
-              <Button type="button" variant="quiet" onClick={backToForm}>
+              <Button type="button" variant="quiet" onClick={backToForm} className="w-full">
                 Use a different email
               </Button>
             </div>
@@ -243,7 +244,7 @@ export function Login() {
   }
 
   return (
-    <PlainLayout>
+    <PlainLayout tagline="Every achievement leaves an echo.">
       <BoardPanel>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {notice && <Notice tone="good">{notice}</Notice>}
@@ -278,46 +279,29 @@ export function Login() {
             />
           </Field>
 
-          <Button
-            type="submit"
-            loading={loading}
-            loadingLabel={mode === 'signup' ? 'Creating account...' : 'Signing in...'}
-          >
-            {mode === 'signup' ? 'Sign up' : 'Sign in'}
-          </Button>
+          <div className="pt-2">
+            <Button
+              type="submit"
+              size="lg"
+              loading={loading}
+              loadingLabel={mode === 'signup' ? 'Creating account...' : 'Signing in...'}
+              className="w-full"
+            >
+              {mode === 'signup' ? 'Create account' : 'Sign in'}
+            </Button>
+          </div>
         </form>
 
-        <div className="mt-8 text-center text-sm text-chalk/60">
-          <button
+        <div className="mt-8 flex justify-center">
+          <TextButton
             type="button"
-            className="underline hover:text-chalk"
+            tone="signal"
             onClick={() => switchMode(mode === 'signup' ? 'signin' : 'signup')}
           >
             {mode === 'signup' ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
-          </button>
+          </TextButton>
         </div>
       </BoardPanel>
     </PlainLayout>
-  )
-}
-
-/**
- * A message in a slot. Errors are announced immediately; confirmations wait
- * for a pause in whatever the screen reader is already saying.
- */
-function Notice({ tone, children }: { tone: 'info' | 'good' | 'error'; children: ReactNode }) {
-  const tones = {
-    info: 'border-lamp/40 text-chalk',
-    good: 'border-posted/50 text-posted',
-    error: 'border-flag/60 text-flare',
-  }
-  return (
-    <p
-      role={tone === 'error' ? 'alert' : 'status'}
-      aria-live={tone === 'error' ? 'assertive' : 'polite'}
-      className={`rounded-slot border-hair bg-recess px-3 py-2 text-sm ${tones[tone]}`}
-    >
-      {children}
-    </p>
   )
 }

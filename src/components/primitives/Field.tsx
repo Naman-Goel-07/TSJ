@@ -3,6 +3,7 @@
  * and errors are rendered by Field, never inside the control itself.
  */
 import { forwardRef } from 'react'
+import { TextButton } from './Controls'
 
 const CONTROL =
   'w-full bg-transparent border-hair border-seam rounded-slot px-3 text-base text-chalk ' +
@@ -133,13 +134,13 @@ export function AttachedFile({
       <span className="text-xs text-chalk/60 tabular-nums shrink-0">{size}</span>
       {stateText && <span className={`text-xs shrink-0 ${stateClass}`}>{stateText}</span>}
       {onRemove && (
-        <button
+        <TextButton
           type="button"
           onClick={onRemove}
-          className="text-xs text-chalk/60 hover:text-chalk underline shrink-0 focus:outline-none focus:shadow-ring rounded-slot px-1"
+          className="shrink-0"
         >
           Remove
-        </button>
+        </TextButton>
       )}
     </div>
   )

@@ -24,6 +24,7 @@ import { Button } from '../components/primitives/Button'
 import { Skeleton } from '../components/primitives/Skeleton'
 import { ErrorState } from '../components/feedback/EmptyState'
 import { Field, Input, Select, Textarea, CharCount, FilePicker, AttachedFile } from '../components/primitives/Field'
+import { TextButton } from '../components/primitives/Controls'
 
 type ExistingProof = { id: string; storage_path: string; file_name: string; size_bytes: number }
 
@@ -308,12 +309,11 @@ export function Submit() {
   const topbar = (
     <div className="flex items-center justify-between w-full">
       <span className="font-display font-bold text-xl text-chalk tracking-sign uppercase">ECHO</span>
-      <button
-        className="text-sm text-chalk/60 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+      <TextButton
         onClick={() => navigate('/')}
-      >
+        >
         Back to the board
-      </button>
+      </TextButton>
     </div>
   )
 

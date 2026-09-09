@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../supabase'
 import { Skeleton } from '../primitives/Skeleton'
+import { IconButton } from '../primitives/Controls'
 
 const TTL_SECONDS = 300
 const REFRESH_MS = (TTL_SECONDS - 60) * 1000
@@ -103,7 +104,8 @@ export function ProofViewer({ submissionId }: { submissionId: string }) {
             type="button"
             onClick={() => setZoomed(proof)}
             className="block w-full text-left border-hair border-seam rounded-slot overflow-hidden
-                       focus:outline-none focus:shadow-ring hover:border-chalk/40"
+                       transition-colors duration-200 focus:outline-none focus:shadow-ring
+                       hover:border-lamp/50 hover:shadow-glow"
           >
             <img
               src={proof.url}
@@ -147,14 +149,13 @@ export function ProofViewer({ submissionId }: { submissionId: string }) {
             className="max-w-full max-h-full object-contain"
             onClick={e => e.stopPropagation()}
           />
-          <button
-            type="button"
-            className="absolute top-4 right-4 h-11 px-4 rounded-slot border-hair border-chalk
-                       text-sm font-semibold text-chalk hover:bg-lit focus:outline-none focus:shadow-ring"
+          <IconButton
+            label="Close"
+            className="absolute top-4 right-4 bg-enamel/80 backdrop-blur-sm"
             onClick={() => setZoomed(null)}
           >
-            Close
-          </button>
+            <span aria-hidden="true" className="text-lg leading-none">&times;</span>
+          </IconButton>
         </div>
       )}
     </div>

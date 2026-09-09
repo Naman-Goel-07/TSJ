@@ -33,6 +33,7 @@ import { Field, Input, Select } from '../components/primitives/Field'
 import { Button } from '../components/primitives/Button'
 import { Notice } from '../components/feedback/Notice'
 import { Skeleton } from '../components/primitives/Skeleton'
+import { TextButton } from '../components/primitives/Controls'
 
 type Track = 'code' | 'open_source' | 'build' | 'pitch'
 
@@ -186,26 +187,27 @@ export function Profile() {
       topbar={
         <div className="flex items-center justify-between w-full">
           <button
-            className="font-display font-bold text-xl text-chalk tracking-sign uppercase focus:outline-none focus:shadow-ring rounded-slot"
+            className="echo-host relative font-display font-black text-xl text-chalk tracking-sign
+                       uppercase rounded-slot px-1 transition-opacity duration-200 hover:opacity-80
+                       focus:outline-none focus:shadow-ring"
             onClick={() => navigate('/')}
+            aria-label="Back to the board"
           >
             ECHO
           </button>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 sm:gap-2">
             {isCore && (
-              <button
-                className="text-sm text-chalk/80 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+              <TextButton
                 onClick={() => navigate('/review')}
-              >
+        >
                 The Booth
-              </button>
+              </TextButton>
             )}
-            <button
-              className="text-sm text-chalk/80 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+            <TextButton
               onClick={() => navigate('/')}
-            >
+        >
               Back to the board
-            </button>
+            </TextButton>
           </div>
         </div>
       }
@@ -219,12 +221,11 @@ export function Profile() {
             <div className="px-panel pt-panel pb-2 flex items-center justify-between gap-4">
               <SignLabel>Your details</SignLabel>
               {!editing && (
-                <button
-                  className="text-sm text-chalk/80 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+                <TextButton
                   onClick={startEdit}
-                >
+        >
                   Edit
-                </button>
+                </TextButton>
               )}
             </div>
             <Seam />
@@ -349,7 +350,7 @@ export function Profile() {
                   note={profile.is_active ? undefined : 'A lead has taken you off the active roster.'}
                 />
               </dl>
-              <p className="mt-6 text-xs text-chalk/60">
+              <p className="mt-6 text-xs text-muted">
                 Role, team and status are set by a lead from the admin screen. A role change reaches you on
                 your next token, so sign out and back in if you have just been promoted.
               </p>
@@ -370,10 +371,10 @@ export function Profile() {
                   <Count n={counts.verified} label="Posted" tone="text-posted" />
                   <Count n={counts.pending} label="In the queue" tone="text-amber" />
                   <Count n={counts.needs_info} label="Sent back" tone="text-amber" />
-                  <Count n={counts.closed} label="Not posted" tone="text-chalk/60" />
+                  <Count n={counts.closed} label="Not posted" tone="text-dim" />
                 </div>
               )}
-              <p className="mt-6 text-xs text-chalk/60">
+              <p className="mt-6 text-xs text-muted">
                 Counts, not points. Individual point values are not readable from a member's session — the
                 team total on the board is the only figure the server will hand over.
               </p>
@@ -404,10 +405,10 @@ export function Profile() {
 function Row({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
-      <dt className="text-sm text-chalk/60 sm:w-48 shrink-0">{label}</dt>
+      <dt className="text-sm text-muted sm:w-48 shrink-0">{label}</dt>
       <dd className="flex-1">
         <span className="text-base text-chalk break-words">{value}</span>
-        {note && <p className="text-xs text-chalk/60 mt-1">{note}</p>}
+        {note && <p className="text-xs text-muted mt-1">{note}</p>}
       </dd>
     </div>
   )
@@ -416,8 +417,8 @@ function Row({ label, value, note }: { label: string; value: string; note?: stri
 function Count({ n, label, tone }: { n: number; label: string; tone: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className={`font-display text-xl font-bold tabular-nums ${tone}`}>{n}</span>
-      <span className="text-xs text-chalk/60">{label}</span>
+      <span className={`font-display text-2xl font-black tabular-nums ${tone}`}>{n}</span>
+      <span className="label text-dim">{label}</span>
     </div>
   )
 }
@@ -474,15 +475,14 @@ function PasswordPanel() {
       <div className="px-panel pt-panel pb-2 flex items-center justify-between gap-4">
         <SignLabel>Password</SignLabel>
         {!open && (
-          <button
-            className="text-sm text-chalk/80 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1"
+          <TextButton
             onClick={() => {
               setDone('')
               setOpen(true)
             }}
-          >
+        >
             Change
-          </button>
+          </TextButton>
         )}
       </div>
       <Seam />
@@ -530,7 +530,7 @@ function PasswordPanel() {
             </div>
           </form>
         ) : (
-          <p className="text-sm text-chalk/60">
+          <p className="text-sm text-muted">
             Set a new password for this account. Other sessions stay signed in until their token expires.
           </p>
         )}

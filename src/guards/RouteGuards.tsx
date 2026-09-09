@@ -49,10 +49,16 @@ export function RequireRole({
     return (
       <div className="min-h-screen bg-recess flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-10 bg-enamel border border-seam rounded-slot shadow-slot shadow-lip mx-auto mb-4" />
+          <div className="w-16 h-10 bg-enamel border-hair border-seam rounded-slot shadow-slot shadow-lip mx-auto mb-4" />
           <p className="text-chalk font-medium">Not available</p>
-          <p className="text-sm text-chalk/60 mt-1">This area is for core members.</p>
-          <a href="/" className="text-sm text-lamp underline mt-4 inline-block">Back to the board</a>
+          <p className="text-sm text-muted mt-1">This area is for core members.</p>
+          <a
+            href="/"
+            className="label inline-block mt-5 rounded-slot px-2.5 py-1.5 text-lamp/85
+                       transition-colors duration-200 hover:text-lamp hover:bg-lamp/[0.06]"
+          >
+            Back to the board
+          </a>
         </div>
       </div>
     )
