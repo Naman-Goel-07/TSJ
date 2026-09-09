@@ -27,6 +27,8 @@ import { Export } from './pages/Export'
 import { Admin } from './pages/Admin'
 import { NotFound } from './pages/Placeholders'
 
+import { Intro } from './pages/Intro'
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -55,6 +57,7 @@ export function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="/intro" element={<Intro />} />
             <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
 
             <Route path="/onboarding" element={
