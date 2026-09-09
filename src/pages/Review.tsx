@@ -25,6 +25,8 @@ import { EmptyState, ErrorState } from '../components/feedback/EmptyState'
 import { Field, Input, Textarea } from '../components/primitives/Field'
 import { ProofViewer } from '../components/booth/ProofViewer'
 import { TextButton, SelectRow, Segmented } from '../components/primitives/Controls'
+import { Avatar } from '../components/media/Avatar'
+import { useTeamAvatars } from '../lib/avatars'
 
 type QueueItem = {
   id: string
@@ -99,6 +101,7 @@ export function Review() {
   })
 
   const queue = useMemo(() => queueQuery.data ?? [], [queueQuery.data])
+  const teamAvatars = useTeamAvatars()
   const pendingCount = queue.filter(q => q.status === 'pending').length
   const sentBackCount = queue.filter(q => q.status === 'needs_info').length
 
@@ -319,18 +322,28 @@ export function Review() {
                       selected={active}
                       onClick={() => setSelectedId(item.id)}
                     >
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-sm font-medium text-chalk truncate">{item.full_name}</span>
-                        <span className="text-xs text-chalk/60 shrink-0 tabular-nums">
-                          {relative(item.submitted_at)}
-                        </span>
+                      <div className="flex items-start gap-3">
+                        <Avatar
+                          name={item.full_name}
+                          url={teamAvatars[item.member_id]}
+                          size="md"
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-sm font-medium text-chalk truncate">{item.full_name}</span>
+                            <span className="text-xs text-chalk/60 shrink-0 tabular-nums">
+                              {relative(item.submitted_at)}
+                            </span>
+                          </div>
+                          <div className="text-sm text-chalk/70 truncate mt-0.5">
+                            {item.label}{item.level ? ` — ${item.level}` : ''}
+                          </div>
+                          {item.status === 'needs_info' && (
+                            <div className="mt-1"><StatusPill status="needs_info" size="sm" /></div>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-sm text-chalk/70 truncate mt-0.5">
-                        {item.label}{item.level ? ` — ${item.level}` : ''}
-                      </div>
-                      {item.status === 'needs_info' && (
-                        <div className="mt-1"><StatusPill status="needs_info" size="sm" /></div>
-                      )}
                     </SelectRow>
                   )
                 })}
@@ -347,14 +360,21 @@ export function Review() {
               <>
                 <BoardPanel>
                   <div className="flex flex-col gap-5">
-                    <div>
-                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <h2 className="text-xl font-display font-bold text-chalk">{selected.full_name}</h2>
-                        <span className="text-sm text-chalk/60">{selected.department}</span>
+                    <div className="flex items-start gap-4">
+                      <Avatar
+                        name={selected.full_name}
+                        url={teamAvatars[selected.member_id]}
+                        size="lg"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                          <h2 className="text-xl font-display font-bold text-chalk">{selected.full_name}</h2>
+                          <span className="text-sm text-chalk/60">{selected.department}</span>
+                        </div>
+                        <p className="text-base text-chalk mt-2">
+                          {selected.label}{selected.level ? ` — ${selected.level}` : ''}
+                        </p>
                       </div>
-                      <p className="text-base text-chalk mt-2">
-                        {selected.label}{selected.level ? ` — ${selected.level}` : ''}
-                      </p>
                     </div>
 
                     <Seam />

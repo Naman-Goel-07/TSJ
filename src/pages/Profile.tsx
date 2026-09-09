@@ -34,6 +34,7 @@ import { Button } from '../components/primitives/Button'
 import { Notice } from '../components/feedback/Notice'
 import { Skeleton } from '../components/primitives/Skeleton'
 import { TextButton } from '../components/primitives/Controls'
+import { AvatarPanel } from '../components/media/AvatarPanel'
 
 type Track = 'code' | 'open_source' | 'build' | 'pitch'
 
@@ -216,7 +217,9 @@ export function Profile() {
         <Skeleton variant="card" />
       ) : (
         <>
-          {/* ── Your details ───────────────────────────────────────────── */}
+          {/* ── Your picture ───────────────────────────────────────────── */}
+          <AvatarPanel /> 
+          {/* you details */}
           <BoardPanel padded={false}>
             <div className="px-panel pt-panel pb-2 flex items-center justify-between gap-4">
               <SignLabel>Your details</SignLabel>

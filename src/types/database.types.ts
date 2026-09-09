@@ -41,6 +41,7 @@ export interface Database {
           enrollment_no: string | null
           team_id: string
           sprint_track: 'code' | 'open_source' | 'build' | 'pitch' | null
+          avatar_path: string | null
           is_active: boolean
           created_at: string
         }
@@ -51,6 +52,7 @@ export interface Database {
           enrollment_no?: string | null
           team_id: string
           sprint_track?: 'code' | 'open_source' | 'build' | 'pitch' | null
+          avatar_path?: string | null
           is_active?: boolean
           created_at?: string
         }
@@ -61,6 +63,7 @@ export interface Database {
           enrollment_no?: string | null
           team_id?: string
           sprint_track?: 'code' | 'open_source' | 'build' | 'pitch' | null
+          avatar_path?: string | null
           is_active?: boolean
           created_at?: string
         }
@@ -466,9 +469,37 @@ export interface Database {
           enrollment_no: string | null
           team_id: string
           sprint_track: 'code' | 'open_source' | 'build' | 'pitch' | null
+          avatar_path: string | null
           is_active: boolean
           created_at: string
         }
+      }
+      set_my_avatar: {
+        Args: { p_avatar_path: string | null }
+        Returns: string | null
+      }
+      get_intro_roster: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          full_name: string
+          department: string
+          avatar_path: string | null
+        }[]
+      }
+      get_team_avatars: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          avatar_path: string | null
+        }[]
+      }
+      get_feed_avatars: {
+        Args: { p_submission_ids: string[] }
+        Returns: {
+          submission_id: string
+          avatar_path: string | null
+        }[]
       }
       set_sprint_config: {
         Args: { p_sprint_start: string; p_total_days: number }

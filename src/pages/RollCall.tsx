@@ -21,6 +21,8 @@ import { Skeleton } from '../components/primitives/Skeleton'
 import { EmptyState, ErrorState } from '../components/feedback/EmptyState'
 import { Field, Input } from '../components/primitives/Field'
 import { TextButton, SelectRow } from '../components/primitives/Controls'
+import { Avatar } from '../components/media/Avatar'
+import { useTeamAvatars } from '../lib/avatars'
 
 const POINTS_PER_MEMBER = 5
 
@@ -68,6 +70,7 @@ export function RollCall() {
   })
 
   const roster = useMemo(() => rosterQuery.data ?? [], [rosterQuery.data])
+  const teamAvatars = useTeamAvatars()
   const alreadyPresent = useMemo(
     () => new Set(roster.filter(r => r.present).map(r => r.id)),
     [roster],
@@ -300,6 +303,11 @@ export function RollCall() {
                         disabled={locked || save.isPending}
                         onChange={() => toggle(member.id)}
                         className="w-5 h-5 accent-lamp shrink-0 focus:outline-none focus:shadow-ring rounded-slot"
+                      />
+                      <Avatar
+                        name={member.full_name}
+                        url={teamAvatars[member.id]}
+                        size="md"
                       />
                       <span className="flex-1 min-w-0">
                         <span className="block text-sm text-chalk truncate">{member.full_name}</span>

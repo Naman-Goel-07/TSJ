@@ -21,6 +21,8 @@ import { Skeleton } from '../components/primitives/Skeleton'
 import { EmptyState, ErrorState } from '../components/feedback/EmptyState'
 import { Field, Input, Select } from '../components/primitives/Field'
 import { TextButton } from '../components/primitives/Controls'
+import { Avatar } from '../components/media/Avatar'
+import { useTeamAvatars } from '../lib/avatars'
 
 type AppRole = 'member' | 'core' | 'lead'
 
@@ -146,6 +148,7 @@ export function Admin() {
   })
 
   const roster = rosterQuery.data ?? []
+  const teamAvatars = useTeamAvatars()
   const config = configQuery.data
 
   const topbar = (
@@ -218,18 +221,21 @@ export function Admin() {
                 className={`px-4 py-3 border-b border-seam flex flex-wrap items-center gap-x-4 gap-y-2
                   ${m.is_active ? '' : 'opacity-50'}`}
               >
-                <div className="flex-1 min-w-[180px]">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-sm font-medium text-chalk truncate">{m.full_name}</span>
-                    {m.id === myId && <span className="text-xs text-chalk/60">you</span>}
-                  </div>
-                  <div className="text-xs text-chalk/60 truncate">
-                    {m.department}
-                    {m.enrollment_no ? `, ${m.enrollment_no}` : ''}
-                    {m.sprint_track ? `, ${m.sprint_track.replace('_', ' ')} track` : ''}
+                <div className="flex-1 min-w-[180px] flex items-center gap-3">
+                  <Avatar name={m.full_name} url={teamAvatars[m.id]} size="md" />
+                  <div className="min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-medium text-chalk truncate">{m.full_name}</span>
+                      {m.id === myId && <span className="text-xs text-chalk/60">you</span>}
+                    </div>
+                    <div className="text-xs text-chalk/60 truncate">
+                      {m.department}
+                      {m.enrollment_no ? `, ${m.enrollment_no}` : ''}
+                      {m.sprint_track ? `, ${m.sprint_track.replace('_', ' ')} track` : ''}
+                    </div>
                   </div>
                 </div>
-
+                
                 <div className="text-xs text-chalk/60 tabular-nums shrink-0 w-28">
                   {m.posted_count} posted, {m.posted_points} pts
                 </div>

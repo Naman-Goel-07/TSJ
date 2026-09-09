@@ -27,6 +27,7 @@
   import { TextButton } from '../components/primitives/Controls'
   import { EmptyState, ErrorState } from '../components/feedback/EmptyState'
   import { StatusPill } from '../components/status/StatusPill'
+  import { useFeedAvatars } from '../lib/avatars'
 
   function computeSprintDay(sprintStart: string, totalDays: number): { day: number; total: number } {
     const start = new Date(sprintStart)
@@ -117,6 +118,10 @@
 
     const feed = feedQuery.data ?? []
     const mine = myQuery.data ?? []
+
+    // The feed carries a submission id but no member id, so the pictures are
+    // fetched by submission id rather than by joining on a name.
+    const feedAvatars = useFeedAvatars((feed as any[]).map(row => row.id))
 
     return (
       <BoardLayout
@@ -224,6 +229,7 @@
                     what={row.activity_label}
                     level={row.activity_level}
                     when={row.posted_at ?? row.occurred_on}
+                    avatarUrl={feedAvatars[row.id]}
                   />
                   <Seam />
                 </div>
