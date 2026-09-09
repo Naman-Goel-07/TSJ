@@ -10,19 +10,131 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* One focus treatment, everywhere, always visible. */
+  /* One focus treatment, everywhere, always visible. Rose, because focus is a
+     kind of intent and intent is rose in this system. */
   :focus-visible {
     @apply outline-none shadow-ring rounded-slot;
   }
 
-  /* Archivo is variable: pin the width axis for board numerals. */
-  .font-display { font-variation-settings: 'wdth' 112; }
+  /* Archivo is variable on both axes. Pin the width so the wordmark and the
+     board total stay wide at every size — the default instance is too narrow
+     to read as a scoreboard. */
+  .font-display { font-variation-settings: 'wdth' 118; }
 
-  ::selection { @apply bg-lamp text-graphite; }
+  ::selection { @apply bg-lamp text-chalk; }
 
-  /* Native controls inherit the board, not the OS. */
   input, select, textarea, button { font: inherit; color: inherit; }
   select { color-scheme: dark; }
+}
+
+@layer components {
+  /* ── instrumentation voice ─────────────────────────────────────────────
+     Every label, button, status reading and timestamp. If a person scans it
+     rather than reads it, it is a .label.                                   */
+  .label {
+    @apply font-mono font-bold text-label uppercase;
+  }
+
+  /* ── the void ──────────────────────────────────────────────────────────
+     Two layers under everything: drifting particulate (canvas, see
+     components/signal) and a static bloom. The bloom is what stops the page
+     reading as flat #000 in a photograph, which matters for a demo.         */
+  .haze {
+    background:
+      radial-gradient(60% 34% at 50% 46%, rgba(255, 46, 85, 0.10), transparent 70%),
+      radial-gradient(90% 40% at 50% 104%, rgba(255, 120, 90, 0.13), transparent 70%),
+      radial-gradient(50% 30% at 18% 8%, rgba(120, 140, 255, 0.06), transparent 70%);
+  }
+
+  /* Glass over the whole screen. Multiply on void is invisible; it only bites
+     where the screen is lit, which is exactly where scanlines belong. */
+  .glass::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom, rgba(0, 0, 0, 0) 0 2px, rgba(0, 0, 0, 0.22) 2px 3px);
+    mix-blend-mode: multiply;
+    opacity: 0.5;
+  }
+
+  /* ── transmitted type ──────────────────────────────────────────────────
+     Four stacked copies of the same glyphs: rose behind and left, cyan behind
+     and right, white on top, and a line grid that multiplies over all of it.
+     Utility classes cannot express this, so it lives here and ships as the
+     <Wordmark> component.                                                    */
+  .wm { @apply relative font-display font-black uppercase; }
+  .wm-layer { @apply absolute inset-0 z-[1]; }
+  .wm-rose {
+    color: #FF2E55;
+    mix-blend-mode: screen;
+    opacity: 0.62;
+    transform: translate3d(-3px, 1px, 0);
+    animation: wmDriftA 5.5s ease-in-out infinite;
+  }
+  .wm-cyan {
+    color: #35D6FF;
+    mix-blend-mode: screen;
+    opacity: 0.5;
+    transform: translate3d(3px, -1px, 0);
+    animation: wmDriftB 5.5s ease-in-out infinite;
+  }
+  .wm-top {
+    @apply relative z-[2] text-white;
+    text-shadow:
+      0 0 14px rgba(255, 255, 255, 0.5),
+      0 0 48px rgba(255, 255, 255, 0.22),
+      0 0 90px rgba(255, 46, 85, 0.28);
+  }
+  .wm-grid {
+    position: absolute;
+    inset: -6% -2%;
+    z-index: 3;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom, rgba(0, 0, 0, 0) 0 3px, rgba(0, 0, 0, 0.62) 3px 6px);
+    mix-blend-mode: multiply;
+    animation: scanRoll 9s linear infinite;
+  }
+
+  /* The interruption. Fires on an irregular interval — a glitch on a metronome
+     stops reading as a fault and starts reading as decoration. */
+  .wm.is-glitch .wm-rose { transform: translate3d(-11px, -3px, 0); opacity: 0.95; }
+  .wm.is-glitch .wm-cyan { transform: translate3d(9px, 3px, 0);   opacity: 0.85; }
+  .wm.is-glitch .wm-top  { animation: wmTear 0.22s steps(2, end) 2; }
+
+  @keyframes wmDriftA {
+    0%, 100% { transform: translate3d(-3px, 1px, 0); }
+    50%      { transform: translate3d(-5px, 0, 0); }
+  }
+  @keyframes wmDriftB {
+    0%, 100% { transform: translate3d(3px, -1px, 0); }
+    50%      { transform: translate3d(5px, 0, 0); }
+  }
+  @keyframes wmTear {
+    0%   { clip-path: inset(0 0 0 0);      transform: translateX(0); }
+    25%  { clip-path: inset(18% 0 54% 0);  transform: translateX(-9px); }
+    50%  { clip-path: inset(0 0 0 0);      transform: translateX(0); }
+    75%  { clip-path: inset(62% 0 16% 0);  transform: translateX(7px); }
+    100% { clip-path: inset(0 0 0 0);      transform: translateX(0); }
+  }
+
+  /* ── the board total ───────────────────────────────────────────────────
+     The one number a member is allowed to see, so it gets the full bloom. */
+  .total-glow {
+    text-shadow:
+      0 0 16px rgba(255, 255, 255, 0.42),
+      0 0 70px rgba(255, 46, 85, 0.30);
+  }
+
+  /* ── status indicator ──────────────────────────────────────────────────
+     A lit LED, never a filled chip. Colour plus a word, never colour alone. */
+  .led { @apply w-[7px] h-[7px] rounded-pill shrink-0; }
+  .led-posted { background: #3BE8A6; box-shadow: 0 0 9px #3BE8A6; }
+  .led-queue  { background: #FFC24D; box-shadow: 0 0 9px #FFC24D; }
+  .led-back   { background: #35D6FF; box-shadow: 0 0 9px #35D6FF; }
+  .led-out    { background: #4A4A57; }
 }
 
 @media (prefers-reduced-motion: reduce) {
