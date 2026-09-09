@@ -452,6 +452,24 @@ export interface Database {
         Args: { p_member_id: string; p_is_active: boolean }
         Returns: undefined
       }
+      update_my_profile: {
+        Args: {
+          p_full_name: string
+          p_department: string
+          p_enrollment_no?: string | null
+          p_sprint_track?: 'code' | 'open_source' | 'build' | 'pitch' | null
+        }
+        Returns: {
+          id: string
+          full_name: string
+          department: string
+          enrollment_no: string | null
+          team_id: string
+          sprint_track: 'code' | 'open_source' | 'build' | 'pitch' | null
+          is_active: boolean
+          created_at: string
+        }
+      }
       set_sprint_config: {
         Args: { p_sprint_start: string; p_total_days: number }
         Returns: undefined

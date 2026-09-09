@@ -6,6 +6,7 @@
  *   - /onboarding requires session but no profile
  *   - /          requires session + profile
  *   - /submit    requires session + profile
+ *   - /profile   requires session + profile
  *   - /review    requires core or lead role
  *   - /admin     requires lead role
  */
@@ -13,11 +14,13 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { RequireAuth, RequireProfile, RequireRole } from './guards/RouteGuards'
+import { Skeleton } from './components/primitives/Skeleton'
 
 import { Login } from './pages/Login'
 import { Onboarding } from './pages/Onboarding'
 import { Board } from './pages/Board'
 import { Submit } from './pages/Submit'
+import { Profile } from './pages/Profile'
 import { Review } from './pages/Review'
 import { RollCall } from './pages/RollCall'
 import { Export } from './pages/Export'
@@ -35,7 +38,13 @@ const queryClient = new QueryClient({
 
 function PublicOnly({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth()
-  if (loading) return null
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-recess flex items-center justify-center">
+        <Skeleton variant="card" />
+      </div>
+    )
+  }
   if (session) return <Navigate to="/" replace />
   return <>{children}</>
 }
@@ -63,6 +72,12 @@ export function App() {
             <Route path="/submit" element={
               <RequireProfile>
                 <Submit />
+              </RequireProfile>
+            } />
+
+            <Route path="/profile" element={
+              <RequireProfile>
+                <Profile />
               </RequireProfile>
             } />
 
@@ -103,7 +118,7 @@ export function App() {
 
 /** Onboarding gate: if you already have a profile, go home. */
 function OnboardingGate() {
-  const { session, profile, loading } = useAuth()
+  const { profile, loading } = useAuth()
   if (loading) return null
   if (profile) return <Navigate to="/" replace />
   return <Onboarding />

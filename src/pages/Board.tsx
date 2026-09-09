@@ -124,7 +124,7 @@ export function Board() {
           <span className="font-display font-bold text-xl text-chalk tracking-sign uppercase">ECHO</span>
           <div className="flex items-center gap-4">
             {sprintInfo && (
-              <span className="text-sm text-chalk/60 font-body">
+              <span className="hidden sm:inline text-sm text-chalk/60 font-body">
                 Day {sprintInfo.day} of {sprintInfo.total}
               </span>
             )}
@@ -136,9 +136,19 @@ export function Board() {
                 The Booth
               </button>
             )}
+            {/* Your own record. First name only — the bar is 56px and shared with three other controls. */}
+            <button
+              className="text-sm text-chalk/80 hover:text-chalk underline focus:outline-none focus:shadow-ring rounded-slot px-1 max-w-[10ch] truncate"
+              onClick={() => navigate('/profile')}
+            >
+              {profile?.full_name.split(' ')[0] ?? 'Profile'}
+            </button>
             <button
               className="text-sm text-chalk/60 hover:text-chalk"
-              onClick={async () => { await supabase.auth.signOut() }}
+              onClick={async () => {
+                await supabase.auth.signOut()
+                queryClient.clear()
+              }}
             >
               Sign out
             </button>
