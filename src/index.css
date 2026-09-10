@@ -24,8 +24,17 @@
 
   input, select, textarea, button { font: inherit; color: inherit; }
   select { color-scheme: dark; }
+  select option {
+  color: #050507;
+  background-color: #F2F2F5;
 }
 
+select optgroup {
+  color: #050507;
+  background-color: #F2F2F5;
+  font-weight: 700;
+}
+}
 @layer components {
 
   /* ══ THE ECHO ═══════════════════════════════════════════════════════════

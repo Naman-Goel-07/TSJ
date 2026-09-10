@@ -89,6 +89,283 @@ function safeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80)
 }
 
+function CalendarPicker({
+  value,
+  maxDate,
+  onChange,
+  disabled,
+}: {
+  value: string
+  maxDate: string
+  onChange: (value: string) => void
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+
+  const parseDate = (value: string) => {
+    if (!value) return null
+    const [year, month, day] = value.split('-').map(Number)
+    if (!year || !month || !day) return null
+    return new Date(year, month - 1, day)
+  }
+
+  const selectedDate = parseDate(value)
+  const max = parseDate(maxDate) ?? new Date()
+
+  const [viewDate, setViewDate] = useState(
+    selectedDate ?? max
+  )
+
+  const year = viewDate.getFullYear()
+  const month = viewDate.getMonth()
+
+  const monthName = viewDate.toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  })
+
+  const formattedValue = selectedDate
+    ? selectedDate.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : 'Select a date'
+
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+
+  // Monday = 0, Sunday = 6
+  const startingDay = (firstDay.getDay() + 6) % 7
+  const daysInMonth = lastDay.getDate()
+
+  const days = []
+
+  for (let i = 0; i < startingDay; i++) {
+    days.push(null)
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    days.push(day)
+  }
+
+  const previousMonth = () => {
+    setViewDate(new Date(year, month - 1, 1))
+  }
+
+  const nextMonth = () => {
+    const next = new Date(year, month + 1, 1)
+
+    // Don't allow navigating beyond the current month
+    if (
+      next.getFullYear() > max.getFullYear() ||
+      (next.getFullYear() === max.getFullYear() &&
+        next.getMonth() > max.getMonth())
+    ) {
+      return
+    }
+
+    setViewDate(next)
+  }
+
+  const selectDay = (day: number) => {
+    const selected = new Date(year, month, day)
+
+    // Prevent future dates
+    if (selected > max) return
+
+    const formatted =
+      `${selected.getFullYear()}-` +
+      `${String(selected.getMonth() + 1).padStart(2, '0')}-` +
+      `${String(selected.getDate()).padStart(2, '0')}`
+
+    onChange(formatted)
+    setOpen(false)
+  }
+
+  const isSelected = (day: number) => {
+    if (!selectedDate) return false
+
+    return (
+      selectedDate.getFullYear() === year &&
+      selectedDate.getMonth() === month &&
+      selectedDate.getDate() === day
+    )
+  }
+
+  const isToday = (day: number) => {
+    const todayDate = new Date()
+
+    return (
+      todayDate.getFullYear() === year &&
+      todayDate.getMonth() === month &&
+      todayDate.getDate() === day
+    )
+  }
+
+  const isFuture = (day: number) => {
+    const date = new Date(year, month, day)
+    return date > max
+  }
+
+  return (
+    <div className="relative">
+      {/* Date field */}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => {
+          if (!open && selectedDate) {
+            setViewDate(selectedDate)
+          } else if (!open) {
+            setViewDate(max)
+          }
+
+          setOpen(!open)
+        }}
+        className="w-full h-11 bg-transparent border-hair border-seam rounded-slot px-3
+                   text-base text-chalk flex items-center justify-between
+                   focus:outline-none focus:border-chalk/40 focus:shadow-ring
+                   disabled:opacity-50 disabled:cursor-not-allowed
+                   text-left"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
+        <span className={selectedDate ? 'text-chalk' : 'text-chalk/40'}>
+          {formattedValue}
+        </span>
+
+        <span className="text-chalk/60 text-lg leading-none">
+          ▣
+        </span>
+      </button>
+
+      {/* Calendar */}
+      {open && (
+        <div
+          className="absolute z-50 mt-2 w-full max-w-[360px] rounded-slot
+                     border-hair border-seam bg-recess p-4 shadow-xl"
+          role="dialog"
+          aria-label="Choose a date"
+        >
+          {/* Calendar header */}
+          <div className="flex items-center justify-between mb-4">
+            <button
+              type="button"
+              onClick={previousMonth}
+              className="w-10 h-10 rounded-slot border-hair border-seam
+                         text-chalk hover:bg-lit transition-colors
+                         focus:outline-none focus:shadow-ring"
+              aria-label="Previous month"
+            >
+              ‹
+            </button>
+
+            <span className="text-base font-semibold text-chalk">
+              {monthName}
+            </span>
+
+            <button
+              type="button"
+              onClick={nextMonth}
+              className="w-10 h-10 rounded-slot border-hair border-seam
+                         text-chalk hover:bg-lit transition-colors
+                         focus:outline-none focus:shadow-ring"
+              aria-label="Next month"
+            >
+              ›
+            </button>
+          </div>
+
+          {/* Weekdays */}
+          <div className="grid grid-cols-7 mb-2">
+            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
+              <div
+                key={`${day}-${index}`}
+                className="h-8 flex items-center justify-center
+                           text-xs font-semibold text-chalk/40"
+              >
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Days */}
+          <div className="grid grid-cols-7 gap-1">
+            {days.map((day, index) => {
+              if (day === null) {
+                return <div key={`empty-${index}`} className="h-10" />
+              }
+
+              const selected = isSelected(day)
+              const today = isToday(day)
+              const future = isFuture(day)
+
+              return (
+              <button
+                key={day}
+                type="button"
+                disabled={future}
+                onClick={() => selectDay(day)}
+                className={[
+                  'h-10 w-full rounded-slot text-sm transition-colors',
+                  'focus:outline-none focus:shadow-ring',
+
+                  // Selected date
+                  selected
+                    ? 'bg-flare text-[#050507] font-bold hover:bg-flare/90'
+
+                    // Dates after today
+                    : future
+                      ? 'text-chalk/20 cursor-not-allowed'
+
+                      // Today
+                      : today
+                        ? 'border-hair border-chalk/40 text-chalk font-semibold hover:bg-lit'
+
+                        // Normal date
+                        : 'text-chalk hover:bg-lit',
+                ].join(' ')}
+                aria-label={`${day} ${monthName}`}
+                aria-pressed={selected}
+              >
+                {day}
+              </button>
+            )
+
+
+            })}
+          </div>
+
+          {/* Today shortcut */}
+          <div className="mt-4 pt-3 border-t border-seam flex justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                const todayValue = today()
+                onChange(todayValue)
+                setViewDate(max)
+                setOpen(false)
+              }}
+              className="text-sm text-chalk/70 hover:text-chalk"
+            >
+              Today
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="text-sm text-chalk/50 hover:text-chalk"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function Submit() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -115,6 +392,7 @@ export function Submit() {
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     resolver,
@@ -410,16 +688,29 @@ export function Submit() {
               <Input id="title" maxLength={140} {...register('title')} disabled={busy} />
             </Field>
 
-            <Field label="Date it happened" error={errors.occurred_on?.message} htmlFor="occurred_on">
-              <Input
-                id="occurred_on"
-                type="date"
-                max={today()}
-                className="tabular-nums"
-                {...register('occurred_on')}
-                disabled={busy}
-              />
-            </Field>
+            <Field
+  label="Date it happened"
+  error={errors.occurred_on?.message}
+  htmlFor="occurred_on"
+>
+  <input
+    id="occurred_on"
+    type="hidden"
+    {...register('occurred_on')}
+  />
+
+  <CalendarPicker
+    value={watch('occurred_on')}
+    maxDate={today()}
+    onChange={(value) => {
+      setValue('occurred_on', value, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+    }}
+    disabled={busy}
+  />
+</Field>
 
             <Field label="Details (optional)" error={errors.details?.message} htmlFor="details">
               <Textarea
