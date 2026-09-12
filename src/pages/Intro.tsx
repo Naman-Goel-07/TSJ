@@ -300,11 +300,8 @@ export function Intro() {
     <div className="relative bg-transparent">
       {/* ─── Nav bar ──────────────────────────────────────────────────── */}
       <nav className="intro-nav glass-topbar" aria-label="Site navigation">
-        <div className="flex items-center gap-2">
-          <span className="text-lamp text-lg" aria-hidden="true">✦</span>
-          <span className="font-display font-black uppercase text-chalk tracking-sign text-sm">
-            ECHO
-          </span>
+        <div className="flex items-center">
+          <img src="/logo.png" alt="ECHO" className="h-6 w-auto object-contain" />
         </div>
 
         <div className="intro-nav-links hidden sm:flex items-center gap-8">

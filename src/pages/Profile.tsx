@@ -152,10 +152,10 @@ export function Profile() {
     <div className="min-h-screen bg-transparent flex flex-col items-center">
       <header className="glass-topbar w-full h-[56px] sticky top-0 z-header flex items-center justify-between px-6">
         <button
-          className="font-display font-bold text-xl text-chalk tracking-sign uppercase hover:text-lamp transition-colors"
+          className="flex items-center hover:opacity-80 transition-opacity"
           onClick={() => navigate('/')}
         >
-          ECHO
+          <img src="/logo.png" alt="ECHO" className="h-8 w-auto object-contain" />
         </button>
         <div className="flex items-center gap-4">
           {isCore && <TextButton onClick={() => navigate('/review')}>The Booth</TextButton>}

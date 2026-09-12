@@ -45,9 +45,9 @@ export function GlobalNav() {
       {/* Left */}
       <button 
         onClick={() => navigate('/board')}
-        className="font-display font-bold text-xl text-chalk tracking-sign lowercase hover:text-lamp transition-colors"
+        className="flex items-center hover:opacity-80 transition-opacity"
       >
-        echo
+        <img src="/logo.png" alt="ECHO" className="h-8 w-auto object-contain" />
       </button>
 
       {/* Center */}
@@ -55,6 +55,9 @@ export function GlobalNav() {
         <button onClick={() => navigate('/board')} className={navLinkClass('/board')}>home</button>
         <button onClick={() => navigate('/')} className="text-sm text-chalk/60 hover:text-chalk transition-colors lowercase">team</button>
         <button onClick={() => navigate('/submissions')} className={navLinkClass('/submissions')}>submissions</button>
+        {isCore && (
+          <button onClick={() => navigate('/review')} className={navLinkClass('/review')}>verify</button>
+        )}
       </div>
 
       {/* Right */}
@@ -75,12 +78,6 @@ export function GlobalNav() {
             <button onClick={() => { navigate('/profile'); setMenuOpen(false) }} className="w-full text-left px-4 py-2 text-sm text-chalk/80 hover:text-chalk hover:bg-chalk/5 transition-colors lowercase">
               profile
             </button>
-            
-            {isCore && (
-              <button onClick={() => { navigate('/review'); setMenuOpen(false) }} className="w-full text-left px-4 py-2 text-sm text-chalk/80 hover:text-chalk hover:bg-chalk/5 transition-colors lowercase">
-                verify
-              </button>
-            )}
             <div className="my-1 border-t border-chalk/10" />
             <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-lamp hover:bg-lamp/10 transition-colors lowercase">
               sign out
