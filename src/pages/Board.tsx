@@ -18,6 +18,7 @@
   import { supabase } from '../supabase'
   import { useAuth } from '../context/AuthContext'
   import { BoardLayout } from '../components/layout/BoardLayout'
+  import { GlobalNav } from '../components/layout/GlobalNav'
   import { BoardPanel } from '../components/board/BoardPanel'
   import { SignLabel } from '../components/board/SignLabel'
   import { Meter } from '../components/board/Meter'
@@ -64,12 +65,19 @@
     const navigate = useNavigate()
     const queryClient = useQueryClient()
 
+    const teamId = 'f0ab9a4a-2e4b-4568-99ef-5b4736cc33c5'
+
     const totalQuery = useQuery({
-      queryKey: ['team-total'],
+      queryKey: ['team-total', teamId],
       queryFn: async () => {
-        const { data, error } = await supabase.rpc('get_team_total')
+        const { data, error } = await supabase
+          .from('submissions')
+          .select('net_points')
+          .eq('status', 'verified')
+          .eq('team_id', teamId)
+          
         if (error) throw error
-        return (data as number) ?? 0
+        return data?.reduce((acc, curr) => acc + (curr.net_points || 0), 0) ?? 0
       },
     })
 
@@ -86,11 +94,32 @@
     })
 
     const feedQuery = useQuery({
-      queryKey: ['board-feed'],
+      queryKey: ['board-feed', teamId],
       queryFn: async () => {
-        const { data, error } = await supabase.rpc('get_board_feed', { p_limit: 30 })
+        const { data, error } = await supabase
+          .from('submissions')
+          .select(`
+            id,
+            occurred_on,
+            decided_at,
+            profiles!submissions_member_id_fkey ( full_name ),
+            activity_catalog!submissions_activity_id_fkey ( label, level )
+          `)
+          .eq('status', 'verified')
+          .eq('team_id', teamId)
+          .order('decided_at', { ascending: false })
+          .limit(30)
+          
         if (error) throw error
-        return data ?? []
+        
+        return (data ?? []).map((row: any) => ({
+          id: row.id,
+          member_name: row.profiles?.full_name ?? 'Unknown',
+          activity_label: row.activity_catalog?.label ?? 'Activity',
+          activity_level: row.activity_catalog?.level,
+          occurred_on: row.occurred_on,
+          posted_at: row.decided_at ?? row.occurred_on
+        }))
       },
     })
 
@@ -145,32 +174,7 @@
     const feedAvatars = useFeedAvatars((feed as any[]).map(row => row.id))
 
     return (
-      <BoardLayout
-        topbar={
-          <div className="flex items-center justify-between w-full">
-            <span className="font-display font-bold text-xl text-chalk tracking-sign uppercase">ECHO</span>
-            <div className="flex items-center gap-1 sm:gap-2">
-              {sprintInfo && (
-                <span className="label hidden sm:inline text-dim">
-                  Day {sprintInfo.day} / {sprintInfo.total}
-                </span>
-              )}
-              {isCore && <TextButton onClick={() => navigate('/review')}>The Booth</TextButton>}
-              <TextButton onClick={() => navigate('/profile')} className="max-w-[12ch] truncate">
-                {profile?.full_name.split(' ')[0] ?? 'Profile'}
-              </TextButton>
-              <TextButton
-                onClick={async () => {
-                  await supabase.auth.signOut()
-                  queryClient.clear()
-                }}
-              >
-                Sign out
-              </TextButton>
-            </div>
-          </div>
-        }
-      >
+      <BoardLayout topbar={<GlobalNav />}>
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-8 flex flex-col items-center">
           
           {/* Header */}
@@ -247,13 +251,13 @@
               </div>
             </div>
 
-            {/* Recent Contributions */}
+            {/* Recent Echoes */}
             <div className="rounded-2xl border border-lamp/30 bg-gradient-to-b from-lamp/15 to-recess shadow-glow overflow-hidden relative">
               <div className="absolute top-0 right-1/4 w-64 h-64 bg-lamp/20 rounded-full blur-[80px] pointer-events-none" />
 
               <div className="flex items-center justify-between px-6 py-5 border-b border-lamp/20 relative z-10">
-                <h2 className="text-base font-semibold text-chalk">Recent Contributions</h2>
-                <TextButton onClick={() => {}} className="text-sm">View All</TextButton>
+                <h2 className="text-base font-semibold text-chalk">Recent Echoes</h2>
+                <TextButton onClick={() => {}} className="text-sm animate-pulse-slow">View All</TextButton>
               </div>
 
               <div className="relative z-10">

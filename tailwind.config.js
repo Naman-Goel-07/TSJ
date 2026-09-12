@@ -110,6 +110,7 @@ export default {
         scan: 'scanRoll 9s linear infinite',
         orbit: 'orbit 8s linear infinite',
         'card-in': 'fadeScaleIn 600ms ease-out both',
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },

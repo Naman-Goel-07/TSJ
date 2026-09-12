@@ -10,6 +10,8 @@ import { Skeleton } from '../components/primitives/Skeleton'
 import { ErrorState } from '../components/feedback/EmptyState'
 import { AttachedFile } from '../components/primitives/Field'
 import { TextButton } from '../components/primitives/Controls'
+import { GlobalNav } from '../components/layout/GlobalNav'
+import { StatusPill } from '../components/status/StatusPill'
 import { FileText, Calendar, LayoutGrid, Link as LinkIcon, List, Upload, ChevronDown } from 'lucide-react'
 
 type ExistingProof = { id: string; storage_path: string; file_name: string; size_bytes: number }
@@ -462,6 +464,7 @@ export function Submit() {
       }
 
       const newProofs = staged.map(a => ({
+        team_id: 'f0ab9a4a-2e4b-4568-99ef-5b4736cc33c5',
         storage_path: a.path,
         file_name: a.file.name,
         mime_type: a.file.type,
@@ -541,9 +544,8 @@ export function Submit() {
     <div className="min-h-screen bg-recess haze relative overflow-hidden flex flex-col items-center py-16 px-4 sm:px-6">
       
       {/* Topbar / Navigation */}
-      <div className="absolute top-0 left-0 w-full h-[56px] z-header flex items-center justify-between px-6">
-        <button className="font-display font-bold text-xl text-chalk tracking-sign uppercase hover:text-lamp transition-colors" onClick={() => navigate('/')}>ECHO</button>
-        <TextButton onClick={() => navigate('/')}>Back to the board</TextButton>
+      <div className="absolute top-0 left-0 w-full h-[56px] z-header flex items-center px-4 sm:px-6">
+        <GlobalNav />
       </div>
 
       {/* Decorative Side Text */}
@@ -726,6 +728,7 @@ export function Submit() {
           )}
         </div>
       </div>
-    </div>
+
+          </div>
   )
 }

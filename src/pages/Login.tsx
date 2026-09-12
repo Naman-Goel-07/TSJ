@@ -33,8 +33,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabase'
-import { PlainLayout } from '../components/layout/PlainLayout'
-import { BoardPanel } from '../components/board/BoardPanel'
+import { SplitLayout } from '../components/layout/SplitLayout'
 import { Field, Input } from '../components/primitives/Field'
 import { Button } from '../components/primitives/Button'
 import { TextButton } from '../components/primitives/Controls'
@@ -202,9 +201,8 @@ export function Login() {
 
   if (stage === 'check-email') {
     return (
-      <PlainLayout eyebrow="Awaiting confirmation">
-        <BoardPanel className="glass-panel">
-          <div className="flex flex-col gap-4">
+      <SplitLayout>
+        <div className="flex flex-col gap-4">
             <div>
               <h2 className="font-display text-lg font-bold text-chalk">Check your inbox</h2>
               <p className="mt-2 text-sm text-chalk/70">
@@ -238,14 +236,12 @@ export function Login() {
               a couple of minutes.
             </p>
           </div>
-        </BoardPanel>
-      </PlainLayout>
+      </SplitLayout>
     )
   }
 
   return (
-    <PlainLayout tagline="Every achievement leaves an echo.">
-      <BoardPanel className="glass-panel">
+    <SplitLayout>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {notice && <Notice tone="good">{notice}</Notice>}
           {error && <Notice tone="error">{error}</Notice>}
@@ -301,7 +297,6 @@ export function Login() {
             {mode === 'signup' ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
           </TextButton>
         </div>
-      </BoardPanel>
-    </PlainLayout>
+      </SplitLayout>
   )
 }

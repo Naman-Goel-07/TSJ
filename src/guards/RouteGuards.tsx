@@ -19,7 +19,7 @@ function roleLevel(role: AppRole): number {
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth()
   if (loading) return <div className="min-h-screen bg-recess flex items-center justify-center"><Skeleton variant="card" /></div>
-  if (!session) return <Navigate to="/intro" replace />
+  if (!session) return <Navigate to="/" replace />
   return <>{children}</>
 }
 
@@ -27,7 +27,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 export function RequireProfile({ children }: { children: ReactNode }) {
   const { session, profile, loading } = useAuth()
   if (loading) return <div className="min-h-screen bg-recess flex items-center justify-center"><Skeleton variant="card" /></div>
-  if (!session) return <Navigate to="/intro" replace />
+  if (!session) return <Navigate to="/" replace />
   if (!profile) return <Navigate to="/onboarding" replace />
   return <>{children}</>
 }
@@ -42,7 +42,7 @@ export function RequireRole({
 }) {
   const { session, profile, role, loading } = useAuth()
   if (loading) return <div className="min-h-screen bg-recess flex items-center justify-center"><Skeleton variant="card" /></div>
-  if (!session) return <Navigate to="/intro" replace />
+  if (!session) return <Navigate to="/" replace />
   if (!profile) return <Navigate to="/onboarding" replace />
 
   if (roleLevel(role) < roleLevel(minRole)) {

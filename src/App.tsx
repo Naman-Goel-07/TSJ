@@ -20,6 +20,7 @@ import { Login } from './pages/Login'
 import { Onboarding } from './pages/Onboarding'
 import { Board } from './pages/Board'
 import { Submit } from './pages/Submit'
+import { Submissions } from './pages/Submissions'
 import { Profile } from './pages/Profile'
 import { Review } from './pages/Review'
 import { RollCall } from './pages/RollCall'
@@ -57,7 +58,7 @@ export function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/intro" element={<Intro />} />
+            <Route path="/" element={<Intro />} />
             <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
 
             <Route path="/onboarding" element={
@@ -66,7 +67,7 @@ export function App() {
               </RequireAuth>
             } />
 
-            <Route path="/" element={
+            <Route path="/board" element={
               <RequireProfile>
                 <Board />
               </RequireProfile>
@@ -75,6 +76,12 @@ export function App() {
             <Route path="/submit" element={
               <RequireProfile>
                 <Submit />
+              </RequireProfile>
+            } />
+
+            <Route path="/submissions" element={
+              <RequireProfile>
+                <Submissions />
               </RequireProfile>
             } />
 

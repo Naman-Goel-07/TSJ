@@ -23,6 +23,16 @@
   ::selection { @apply bg-lamp text-chalk; }
 
   input, select, textarea, button { font: inherit; color: inherit; }
+
+  /* Stop WebKit from turning autofilled inputs yellow/white */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #100812 inset !important;
+    -webkit-text-fill-color: #F7E8DC !important;
+    caret-color: #F7E8DC !important;
+  }
   select { color-scheme: dark; }
   select option {
   color: #050507;

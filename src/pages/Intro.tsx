@@ -220,7 +220,7 @@ function HeroWordmark() {
   return (
     <div
       ref={containerRef}
-      className="relative flex items-center justify-center w-full mb-6 font-display font-black uppercase text-chalk tracking-[0.06em] leading-[1.04] text-[clamp(56px,18.5vw,254px)]"
+      className="relative flex items-center justify-center w-full mb-2 font-display font-black uppercase text-chalk tracking-[0.06em] leading-[1.04] text-[clamp(42px,13vw,170px)]"
     >
       {[3, 2, 1].map(i => (
         <span
@@ -292,11 +292,6 @@ export function Intro() {
     )
   }
 
-  // If already signed in, redirect them to the board.
-  if (session) {
-    return <Navigate to="/" replace />
-  }
-
   const roster = rosterQuery.data ?? []
   const leads = roster.filter(isLead)
   const members = roster.filter(m => !isLead(m))
@@ -333,9 +328,9 @@ export function Intro() {
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => navigate('/login')}
+          onClick={() => navigate(session ? '/board' : '/login')}
         >
-          Sign In
+          {session ? 'Dashboard' : 'Sign In'}
         </Button>
       </nav>
 
@@ -344,30 +339,19 @@ export function Intro() {
         <Starfield />
         <Haze />
 
-        <p className="label text-muted mb-6 relative z-[1]">
-          ECHO&ensp;·&ensp;TEAM SIGNAL
-        </p>
-
         <HeroWordmark />
 
-        <p className="text-xl text-chalk/80 font-body italic tracking-wide mb-12 relative z-[1]">
+        <p className="text-xl text-chalk/80 font-body italic tracking-wide mb-12 -mt-4 relative z-[1]">
           ideas that resonate
         </p>
 
         <div className="flex items-center gap-3 flex-wrap justify-center relative z-[1]">
           <Button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate(session ? '/submit' : '/login')}
             size="lg"
             lead="+"
           >
             Make an Echo
-          </Button>
-          <Button
-            variant="secondary"
-            size="lg"
-            onClick={scrollToTeam}
-          >
-            Meet the Team
           </Button>
         </div>
 
