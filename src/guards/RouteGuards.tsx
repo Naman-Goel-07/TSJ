@@ -18,7 +18,7 @@ function roleLevel(role: AppRole): number {
 /** Requires the user to be authenticated. Redirects to /login otherwise. */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth()
-  if (loading) return <div className="min-h-screen bg-recess flex items-center justify-center"><Skeleton variant="card" /></div>
+  if (loading) return <div className="min-h-screen bg-transparent flex items-center justify-center"><Skeleton variant="card" /></div>
   if (!session) return <Navigate to="/" replace />
   return <>{children}</>
 }
@@ -26,7 +26,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 /** Requires a completed profile. Sends to /onboarding if missing. */
 export function RequireProfile({ children }: { children: ReactNode }) {
   const { session, profile, loading } = useAuth()
-  if (loading) return <div className="min-h-screen bg-recess flex items-center justify-center"><Skeleton variant="card" /></div>
+  if (loading) return <div className="min-h-screen bg-transparent flex items-center justify-center"><Skeleton variant="card" /></div>
   if (!session) return <Navigate to="/" replace />
   if (!profile) return <Navigate to="/onboarding" replace />
   return <>{children}</>
@@ -41,13 +41,13 @@ export function RequireRole({
   children: ReactNode
 }) {
   const { session, profile, role, loading } = useAuth()
-  if (loading) return <div className="min-h-screen bg-recess flex items-center justify-center"><Skeleton variant="card" /></div>
+  if (loading) return <div className="min-h-screen bg-transparent flex items-center justify-center"><Skeleton variant="card" /></div>
   if (!session) return <Navigate to="/" replace />
   if (!profile) return <Navigate to="/onboarding" replace />
 
   if (roleLevel(role) < roleLevel(minRole)) {
     return (
-      <div className="min-h-screen bg-recess flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-10 bg-enamel border-hair border-seam rounded-slot shadow-slot shadow-lip mx-auto mb-4" />
           <p className="text-chalk font-medium">Not available</p>

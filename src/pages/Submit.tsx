@@ -519,7 +519,7 @@ export function Submit() {
 
   if (posted) {
     return (
-      <div className="min-h-screen bg-recess haze flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-transparent haze flex flex-col items-center justify-center p-6 text-center">
         <h2 className="text-3xl font-display font-medium text-chalk tracking-tight mb-4">
           {posted} is {isEdit ? 'back in the queue.' : 'in the queue.'}
         </h2>
@@ -541,7 +541,7 @@ export function Submit() {
   }
 
   return (
-    <div className="min-h-screen bg-recess haze relative overflow-hidden flex flex-col items-center py-16 px-4 sm:px-6">
+    <div className="min-h-screen bg-transparent haze relative overflow-hidden flex flex-col items-center py-16 px-4 sm:px-6">
       
       {/* Topbar / Navigation */}
       <div className="absolute top-0 left-0 w-full h-[56px] z-header flex items-center px-4 sm:px-6">

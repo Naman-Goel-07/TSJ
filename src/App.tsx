@@ -43,7 +43,7 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth()
   if (loading) {
     return (
-      <div className="min-h-screen bg-recess flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <Skeleton variant="card" />
       </div>
     )

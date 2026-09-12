@@ -8,6 +8,13 @@
   body {
     @apply bg-recess text-chalk font-body text-base antialiased;
     font-variant-numeric: tabular-nums;
+    background-image:
+      linear-gradient(rgba(16, 8, 18, 0.72), rgba(16, 8, 18, 0.72)),
+      url('/bg-theme.jpg');
+    background-size: auto, 600px;
+    background-position: center, center;
+    background-attachment: fixed, fixed;
+    background-repeat: repeat, repeat;
   }
 
   /* One focus treatment, everywhere, always visible. Rose, because focus is a

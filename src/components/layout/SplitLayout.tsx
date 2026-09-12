@@ -7,7 +7,7 @@ export function SplitLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-recess flex flex-col md:flex-row w-full">
+    <div className="min-h-screen bg-transparent flex flex-col md:flex-row w-full">
       {/* Left side: Void & Wordmark */}
       <div className="relative w-full md:w-1/2 flex items-center justify-center isolate overflow-hidden min-h-[35vh] md:min-h-screen border-b md:border-b-0 md:border-r border-chalk/5">
         <Starfield count={40} />
@@ -29,7 +29,7 @@ export function SplitLayout({ children }: { children: ReactNode }) {
       </div>
 
       {/* Right side: Form content */}
-      <div className="w-full md:w-1/2 flex items-center justify-center p-6 md:p-12 relative bg-recess">
+      <div className="w-full md:w-1/2 flex items-center justify-center p-6 md:p-12 relative bg-transparent">
         <div className="w-full max-w-form">
           {children}
         </div>

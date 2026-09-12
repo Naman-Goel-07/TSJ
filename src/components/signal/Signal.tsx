@@ -181,7 +181,7 @@ export function VoidScreen({
   className?: string
 }) {
   return (
-    <div className={`glass relative min-h-screen bg-recess overflow-hidden isolate ${className}`}>
+    <div className={`glass relative min-h-screen bg-transparent overflow-hidden isolate ${className}`}>
       <Starfield />
       <Haze />
       {children}

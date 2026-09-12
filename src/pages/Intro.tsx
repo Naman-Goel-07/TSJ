@@ -286,7 +286,7 @@ export function Intro() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-recess flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <Skeleton variant="card" />
       </div>
     )
@@ -297,7 +297,7 @@ export function Intro() {
   const members = roster.filter(m => !isLead(m))
 
   return (
-    <div className="relative bg-recess">
+    <div className="relative bg-transparent">
       {/* ─── Nav bar ──────────────────────────────────────────────────── */}
       <nav className="intro-nav glass-topbar" aria-label="Site navigation">
         <div className="flex items-center gap-2">
