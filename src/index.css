@@ -109,34 +109,37 @@ select optgroup {
       radial-gradient(900px 640px at 6% 6%, rgba(184,63,90,.10), transparent 58%),
       radial-gradient(1100px 760px at 50% 118%, rgba(74,20,42,.50), transparent 62%),
       radial-gradient(720px 520px at 94% 58%, rgba(242,214,197,.05), transparent 60%);
+    will-change: transform;
+    transform: translateZ(0);
   }
 
   .haze-flare {
     position: absolute;
     top: 30%; left: -16%; width: 60vw; height: 60vw;
     border-radius: 50%;
-    background: conic-gradient(from 210deg at 50% 50%, rgba(184,63,90,.14), rgba(107,32,55,.12), rgba(242,214,197,.06), rgba(184,63,90,.14));
-    filter: blur(96px);
-    opacity: 0.5;
-    mix-blend-mode: screen;
+    /* Replaced expensive conic-gradient + blur with a soft radial gradient that performs well on mobile GPUs */
+    background: radial-gradient(circle at center, rgba(184,63,90,.18) 0%, rgba(107,32,55,.1) 30%, rgba(242,214,197,.03) 60%, transparent 100%);
+    opacity: 0.6;
+    transform: translateZ(0);
   }
 
   .haze-glow {
     position: absolute;
     top: 8%; right: -8%; width: 44vw; height: 44vw;
     border-radius: 50%;
-    background: radial-gradient(circle at 50% 50%, rgba(184,63,90,.13), rgba(74,20,42,.06) 46%, transparent 70%);
-    filter: blur(80px);
-    mix-blend-mode: screen;
+    /* Replaced expensive blur with native gradient fading */
+    background: radial-gradient(circle at center, rgba(184,63,90,.16) 0%, rgba(74,20,42,.08) 40%, transparent 70%);
+    transform: translateZ(0);
   }
 
   .haze-grain {
     position: absolute;
     inset: -50%;
     opacity: 0.045;
-    mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     z-index: 10;
+    pointer-events: none;
+    transform: translateZ(0);
   }
 
   .haze-vignette {
@@ -144,10 +147,33 @@ select optgroup {
     inset: 0;
     background: radial-gradient(120% 92% at 50% 40%, transparent 54%, rgba(0,0,0,.55) 100%);
     z-index: 10;
+    pointer-events: none;
+  }
+
+  /* Disable extremely heavy rendering features on mobile to maintain 60fps */
+  @media (max-width: 768px) {
+    .haze-grain {
+      display: none;
+    }
+  }
+
+  @media (min-width: 769px) {
+    .haze-flare {
+      background: conic-gradient(from 210deg at 50% 50%, rgba(184,63,90,.14), rgba(107,32,55,.12), rgba(242,214,197,.06), rgba(184,63,90,.14));
+      filter: blur(96px);
+      mix-blend-mode: screen;
+    }
+    .haze-glow {
+      background: radial-gradient(circle at 50% 50%, rgba(184,63,90,.13), rgba(74,20,42,.06) 46%, transparent 70%);
+      filter: blur(80px);
+      mix-blend-mode: screen;
+    }
+    .haze-grain {
+      mix-blend-mode: overlay;
+    }
   }
 
   /* Glass over the whole screen. Multiply on void is invisible; it only bites
-     where the screen is lit, which is exactly where scanlines belong. */
   .glass::after {
     content: '';
     position: absolute;

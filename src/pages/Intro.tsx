@@ -160,57 +160,92 @@ function smoothstep(min: number, max: number, v: number) {
 }
 
 function HeroWordmark() {
-  const [scrollY, setScrollY] = useState(0)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY)
+    let ticking = false
+    const isMobile = window.innerWidth < 640
+    const widthFactor = isMobile ? 0.6 : 1
+
+    const updateTransforms = () => {
+      const scrollY = window.scrollY
+      const innerHeight = window.innerHeight
+      const p = clamp(scrollY / (innerHeight * 0.8), 0, 1)
+
+      const centerOpacity = clamp(1 - smoothstep(0.24, 0.46, p), 0, 1)
+      const centerBlur = smoothstep(0.2, 0.5, p) * 4
+      const prog = smoothstep(0, 0.6, p)
+
+      if (containerRef.current) {
+        const centerSpan = containerRef.current.children[3] as HTMLSpanElement
+        if (centerSpan) {
+          centerSpan.style.opacity = centerOpacity.toString()
+          if (!isMobile) {
+            centerSpan.style.filter = `blur(${centerBlur}px)`
+          }
+        }
+
+        [3, 2, 1].forEach((i, idx) => {
+          const span = containerRef.current?.children[idx] as HTMLSpanElement
+          if (!span) return
+
+          const dir = i % 2 === 0 ? 1 : -1
+          const x = dir * prog * (18 + i * 16) * widthFactor
+          const sc = 1 + prog * (0.18 * i)
+          const op = (0.42 / i) * (1 - smoothstep(0.15, 0.62, p))
+
+          span.style.transform = `translate(calc(-50% + ${x}vw), -50%) scale(${sc})`
+          span.style.opacity = op.toString()
+          if (!isMobile) {
+            span.style.filter = `blur(${prog * i * 3.2}px)`
+          }
+        })
+      }
+      ticking = false
+    }
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(updateTransforms)
+        ticking = true
+      }
+    }
+
+    updateTransforms()
+
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Approximate progress (0 to 1) based on scrolling down the first screen
-  const p = typeof window !== 'undefined' ? clamp(scrollY / (window.innerHeight * 0.8), 0, 1) : 0
-
-  const centerOpacity = clamp(1 - smoothstep(0.24, 0.46, p), 0, 1)
-  const centerBlur = smoothstep(0.2, 0.5, p) * 4
-
-  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 640 : false
-  const widthFactor = isMobile ? 0.6 : 1
-
   return (
-    <div className="relative flex items-center justify-center w-full mb-6 font-display font-black uppercase text-chalk tracking-[0.06em] leading-[1.04] text-[clamp(56px,18.5vw,254px)]">
-      {[3, 2, 1].map(i => {
-        const prog = smoothstep(0, 0.6, p)
-        const dir = i % 2 === 0 ? 1 : -1
-        const x = dir * prog * (18 + i * 16) * widthFactor
-        const sc = 1 + prog * (0.18 * i)
-        const op = (0.42 / i) * (1 - smoothstep(0.15, 0.62, p))
-        
-        return (
-          <span
-            key={i}
-            className="absolute left-1/2 top-1/2 z-0"
-            style={{
-              color: 'rgba(242,222,214,0.9)',
-              textShadow: '0 0 40px rgba(184,63,90,.42), 3px 0 rgba(184,63,90,.4), -3px 0 rgba(242,214,197,.4)',
-              transform: `translate(calc(-50% + ${x}vw), -50%) scale(${sc})`,
-              opacity: op,
-              filter: `blur(${prog * i * 3.2}px)`,
-              pointerEvents: 'none'
-            }}
-            aria-hidden="true"
-          >
-            ECHO
-          </span>
-        )
-      })}
-      
-      <span 
+    <div
+      ref={containerRef}
+      className="relative flex items-center justify-center w-full mb-6 font-display font-black uppercase text-chalk tracking-[0.06em] leading-[1.04] text-[clamp(56px,18.5vw,254px)]"
+    >
+      {[3, 2, 1].map(i => (
+        <span
+          key={i}
+          className="absolute left-1/2 top-1/2 z-0"
+          style={{
+            color: 'rgba(242,222,214,0.9)',
+            textShadow: '0 0 40px rgba(184,63,90,.42), 3px 0 rgba(184,63,90,.4), -3px 0 rgba(242,214,197,.4)',
+            transform: `translate(-50%, -50%) scale(1)`,
+            opacity: 0.42 / i,
+            pointerEvents: 'none',
+            willChange: 'transform, opacity',
+          }}
+          aria-hidden="true"
+        >
+          ECHO
+        </span>
+      ))}
+
+      <span
         className="relative z-10 block"
         style={{
-          opacity: centerOpacity,
-          filter: `blur(${centerBlur}px)`,
-          textShadow: '0 0 22px rgba(247,232,220,.58), 0 0 60px rgba(242,214,197,.32), 0 0 130px rgba(184,63,90,.20), 3px 0 rgba(184,63,90,.55), -3px 0 rgba(242,214,197,.5)'
+          willChange: 'opacity',
+          textShadow:
+            '0 0 22px rgba(247,232,220,.58), 0 0 60px rgba(242,214,197,.32), 0 0 130px rgba(184,63,90,.20), 3px 0 rgba(184,63,90,.55), -3px 0 rgba(242,214,197,.5)',
         }}
       >
         ECHO

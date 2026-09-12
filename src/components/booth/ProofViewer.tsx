@@ -151,7 +151,7 @@ export function ProofViewer({ submissionId }: { submissionId: string }) {
           />
           <IconButton
             label="Close"
-            className="absolute top-4 right-4 bg-enamel/80 backdrop-blur-sm"
+            className="absolute top-4 right-4 bg-enamel/80 "
             onClick={() => setZoomed(null)}
           >
             <span aria-hidden="true" className="text-lg leading-none">&times;</span>

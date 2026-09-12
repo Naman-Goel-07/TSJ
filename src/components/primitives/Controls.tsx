@@ -159,7 +159,7 @@ export function Segmented<T extends string>({
       aria-label={label}
       className={
         'inline-flex items-center gap-0.5 rounded-pill border-hair border-seam ' +
-        `bg-enamel/60 p-[3px] backdrop-blur-sm ${className}`
+        `bg-enamel/60 p-[3px]  ${className}`
       }
     >
       {options.map(opt => (
