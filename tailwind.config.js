@@ -28,36 +28,36 @@ export default {
     boxShadow: {
       none: 'none',
       // A plate catches a little light on its top edge and loses it at the base.
-      slot: 'inset 0 1px 0 0 rgba(255,255,255,0.045)',
-      lip: 'inset 0 -1px 0 0 rgba(255,255,255,0.035)',
-      lifted: '0 0 0 1px #23232E, 0 24px 48px -16px rgba(0,0,0,0.85)',
-      ring: '0 0 0 2px #050507, 0 0 0 4px #FF2E55',
+      slot: 'inset 0 1px 0 0 rgba(242,214,197,0.06)',
+      lip: 'inset 0 -1px 0 0 rgba(242,214,197,0.04)',
+      lifted: '0 0 0 1px #4A142A, 0 24px 48px -16px rgba(0,0,0,0.85)',
+      ring: '0 0 0 2px #100812, 0 0 0 4px #F2D6C5',
       // The primary control is a ring of light around empty space.
-      glow: '0 0 22px rgba(255,46,85,0.20), inset 0 0 22px rgba(255,46,85,0.10)',
-      'glow-lg': '0 0 36px rgba(255,46,85,0.36), inset 0 0 26px rgba(255,46,85,0.16)',
-      'glow-danger': '0 0 24px rgba(255,92,56,0.28)',
+      glow: '0 0 30px -8px #B83F5A, inset 0 0 22px -14px #fff',
+      'glow-lg': '0 0 44px -6px #B83F5A, inset 0 0 24px -12px #fff',
+      'glow-danger': '0 0 26px -10px rgba(154,113,128,0.5)',
     },
     screens: { sm: '480px', md: '768px', lg: '1024px', xl: '1280px' },
     extend: {
       colors: {
-        recess:   '#050507',  // the void — the page itself
-        enamel:   '#0B0B12',  // a surface, only where something must be held
-        lit:      '#12121B',  // raised, or hovered
-        seam:     '#23232E',  // hairline
-        lip:      '#34343F',  // lit hairline
+        recess:   '#100812',  // the void — the page itself
+        enamel:   '#1C0B1C',  // a surface, only where something must be held
+        lit:      '#160a17',  // raised, or hovered
+        seam:     '#4A142A',  // hairline
+        lip:      '#6B2037',  // lit hairline
 
-        chalk:    '#F2F2F5',  // text
-        muted:    '#7C7C8A',  // secondary text
-        dim:      '#4A4A57',  // tertiary, disabled, scroll hints
-        graphite: '#050507',  // text on a solid fill
+        chalk:    '#F7E8DC',  // text
+        muted:    '#9A7180',  // secondary text
+        dim:      '#71545f',  // tertiary, disabled, scroll hints
+        graphite: '#100812',  // text on a solid fill
 
-        lamp:     '#FF2E55',  // signal — the one accent, reserved for action
-        ember:    '#7E1128',  // signal, dimmed to a resting state
-        cyan:     '#35D6FF',  // aberration, information, "sent back"
-        posted:   '#3BE8A6',  // verified
-        amber:    '#FFC24D',  // in the queue
-        flag:     '#FF5C38',  // destructive
-        flare:    '#FF8A6B',  // error text
+        lamp:     '#B83F5A',  // signal — the one accent, reserved for action
+        ember:    '#6B2037',  // signal, dimmed to a resting state
+        cyan:     '#F2D6C5',  // aberration, information, "sent back"
+        posted:   '#D8798B',  // verified
+        amber:    '#F2D6C5',  // in the queue
+        flag:     '#9A7180',  // destructive
+        flare:    '#F2D6C5',  // error text
       },
       fontFamily: {
         display: ['Archivo', 'system-ui', 'sans-serif'],
@@ -95,11 +95,21 @@ export default {
           from: { backgroundPositionY: '0' },
           to:   { backgroundPositionY: '-60px' },
         },
+        orbit: {
+          '0%':   { transform: 'rotate(0deg)   translateX(var(--orbit-rx)) rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg) translateX(var(--orbit-rx)) rotate(-360deg)' },
+        },
+        fadeScaleIn: {
+          '0%':   { opacity: '0', transform: 'scale(0.92) translateY(18px)' },
+          '100%': { opacity: '1', transform: 'scale(1)    translateY(0)' },
+        },
       },
       animation: {
         slotIn: 'slotIn 260ms ease-out',
         signal: 'signalPulse 2.4s ease-in-out infinite',
         scan: 'scanRoll 9s linear infinite',
+        orbit: 'orbit 8s linear infinite',
+        'card-in': 'fadeScaleIn 600ms ease-out both',
       },
     },
   },

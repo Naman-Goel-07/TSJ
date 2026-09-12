@@ -11,6 +11,7 @@
    *   - get_board_feed is called via RPC — never direct select from submissions
    *   - Sprint day is computed from sprint_config, never hardcoded
    */
+    import { Star, Trophy, Users } from 'lucide-react'
   import { useEffect, useState } from 'react'
   import { useQuery, useQueryClient } from '@tanstack/react-query'
   import { useNavigate } from 'react-router-dom'
@@ -32,7 +33,6 @@
   function computeSprintDay(sprintStart: string, totalDays: number): { day: number; total: number } {
     const start = new Date(sprintStart)
     const today = new Date()
-    // zero out time component for clean day diff
     start.setHours(0, 0, 0, 0)
     today.setHours(0, 0, 0, 0)
     const diffMs = today.getTime() - start.getTime()
@@ -45,12 +45,25 @@
     return new Intl.NumberFormat('en-US').format(n)
   }
 
+  function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
+    return (
+      <div className="glass-card rounded-2xl p-6 flex items-center gap-5">
+        <div className="w-14 h-14 rounded-full border border-lamp/20 flex items-center justify-center bg-gradient-to-b from-lamp/10 to-transparent shadow-[0_0_16px_-4px_rgba(184,63,90,0.4)] shrink-0">
+          {icon}
+        </div>
+        <div>
+          <div className="text-[10px] font-mono tracking-[0.1em] uppercase text-muted mb-1">{label}</div>
+          <div className="font-display font-medium text-3xl text-chalk leading-none tabular-nums">{value}</div>
+        </div>
+      </div>
+    )
+  }
+
   export function Board() {
     const { session, profile, role } = useAuth()
     const navigate = useNavigate()
     const queryClient = useQueryClient()
 
-    // Team total — the only point number a member ever sees
     const totalQuery = useQuery({
       queryKey: ['team-total'],
       queryFn: async () => {
@@ -60,7 +73,6 @@
       },
     })
 
-    // Sprint config — for the day counter
     const configQuery = useQuery({
       queryKey: ['sprint-config'],
       queryFn: async () => {
@@ -73,7 +85,6 @@
       },
     })
 
-    // Verified feed — no point values in get_board_feed return type
     const feedQuery = useQuery({
       queryKey: ['board-feed'],
       queryFn: async () => {
@@ -83,11 +94,25 @@
       },
     })
 
+    const statsQuery = useQuery({
+      queryKey: ['board-stats'],
+      queryFn: async () => {
+        const teamId = 'f0ab9a4a-2e4b-4568-99ef-5b4736cc33c5'
+        const [achRes, memRes] = await Promise.all([
+          supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('status', 'verified').eq('team_id', teamId),
+          supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('team_id', teamId)
+        ])
+        return {
+          achievements: achRes.count ?? 0,
+          members: memRes.count ?? 0
+        }
+      }
+    })
+
     const sprintInfo = configQuery.data
       ? computeSprintDay(configQuery.data.sprint_start, configQuery.data.total_days)
       : null
 
-    // My calls — from get_my_submissions (no points in return type)
     const myQuery = useQuery({
       queryKey: ['my-submissions'],
       queryFn: async () => {
@@ -100,9 +125,6 @@
 
     const isCore = role === 'core' || role === 'lead'
 
-    // A verify in the booth should move the number on everyone's board without a
-    // refresh. The payload is ignored on purpose — we refetch through the RPCs so
-    // no point value ever arrives over the realtime socket.
     useEffect(() => {
       if (!session) return
       const channel = supabase
@@ -111,6 +133,7 @@
           queryClient.invalidateQueries({ queryKey: ['team-total'] })
           queryClient.invalidateQueries({ queryKey: ['board-feed'] })
           queryClient.invalidateQueries({ queryKey: ['my-submissions'] })
+          queryClient.invalidateQueries({ queryKey: ['board-stats'] })
         })
         .subscribe()
       return () => { supabase.removeChannel(channel) }
@@ -119,8 +142,6 @@
     const feed = feedQuery.data ?? []
     const mine = myQuery.data ?? []
 
-    // The feed carries a submission id but no member id, so the pictures are
-    // fetched by submission id rather than by joining on a name.
     const feedAvatars = useFeedAvatars((feed as any[]).map(row => row.id))
 
     return (
@@ -135,7 +156,6 @@
                 </span>
               )}
               {isCore && <TextButton onClick={() => navigate('/review')}>The Booth</TextButton>}
-              {/* Your own record. First name only — the rail is 56px and shared with three other controls. */}
               <TextButton onClick={() => navigate('/profile')} className="max-w-[12ch] truncate">
                 {profile?.full_name.split(' ')[0] ?? 'Profile'}
               </TextButton>
@@ -151,140 +171,131 @@
           </div>
         }
       >
-        {/* The Board — team total */}
-        <BoardPanel>
-          <div className="flex flex-col items-center gap-6 py-4">
-            {/* Total score */}
-            {totalQuery.isLoading ? (
-              <Skeleton variant="total" />
-            ) : totalQuery.isError ? (
-              <ErrorState
-                headline="Could not load the score"
-                body="The board total failed to load. Check your connection."
-                retry={() => totalQuery.refetch()}
-              />
-            ) : (
-              <>
-                <div className="font-display font-black text-board text-white tabular-nums total-glow">
-                  {formatTotal(totalQuery.data ?? 0)}
-                </div>
-                <p className="label text-dim">Posted to the board</p>
-              </>
-            )}
-
-            {/* Sprint progress meter */}
-            {configQuery.data && sprintInfo && (
-              <div className="w-full max-w-sm">
-                <Meter value={sprintInfo.day} max={sprintInfo.total} label="Sprint progress" />
-              </div>
-            )}
-          </div>
-
-          <Seam />
-
-          {/* Submit CTA */}
-          <div className="pt-4">
-            <Button
-              variant="primary"
-              size="lg"
-              lead="+"
-              className="w-full sm:w-auto"
-              onClick={() => navigate('/submit')}
-            >
-              Submit achievement
-            </Button>
-          </div>
-        </BoardPanel>
-
-        {/* ON THE BOARD — verified feed */}
-        <BoardPanel padded={false}>
-          <div className="px-panel pt-panel pb-2">
-            <SignLabel>On the board</SignLabel>
-          </div>
-          <Seam />
-
-          {feedQuery.isLoading ? (
-            <div>
-              {[...Array(5)].map((_, i) => <Skeleton key={i} variant="row" />)}
+        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-8 flex flex-col items-center">
+          
+          {/* Header */}
+          <div className="flex flex-col items-center mb-10 text-center">
+            <div className="text-sm font-medium text-muted mb-3">
+              Collective Progress
             </div>
-          ) : feedQuery.isError ? (
-            <div className="px-panel py-8">
-              <ErrorState
-                headline="Could not load the feed"
-                body="The board feed failed to load. Try refreshing."
-                retry={() => feedQuery.refetch()}
-              />
-            </div>
-          ) : feed.length === 0 ? (
-            <EmptyState
-              headline="The board is empty."
-              body="Be the first to call something in. Submit an achievement and a core member will post it."
+            <h1 className="font-display font-medium text-4xl text-chalk max-w-[20ch] mx-auto leading-[1.1]">
+              Small Contributions<br/>Make a Bigger <span className="text-lamp">Echo</span>
+            </h1>
+          </div>
+
+          {/* Stat Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10 w-full">
+            <StatCard 
+              icon={<Star className="w-6 h-6 text-chalk" strokeWidth={1.5} />}
+              label="Team Points" 
+              value={totalQuery.isLoading ? '-' : formatTotal(totalQuery.data ?? 0)} 
             />
-          ) : (
-            <div>
-              {feed.map((row: any) => (
-                <div key={row.id}>
-                  <FeedRow
-                    who={row.member_name}
-                    what={row.activity_label}
-                    level={row.activity_level}
-                    when={row.posted_at ?? row.occurred_on}
-                    avatarUrl={feedAvatars[row.id]}
-                  />
-                  <Seam />
-                </div>
-              ))}
-              <p className="px-panel py-3 text-xs text-chalk/60">
-                Showing the last {feed.length} posts
-              </p>
-            </div>
-          )}
-        </BoardPanel>
-
-        {/* YOUR CALLS — own submissions, no points */}
-        <BoardPanel padded={false}>
-          <div className="px-panel pt-panel pb-2">
-            <SignLabel>Your calls</SignLabel>
+            <StatCard 
+              icon={<Trophy className="w-6 h-6 text-chalk" strokeWidth={1.5} />}
+              label="Total Achievements" 
+              value={statsQuery.isLoading ? '-' : formatTotal(statsQuery.data?.achievements ?? feed.length)} 
+            />
+            <StatCard 
+              icon={<Users className="w-6 h-6 text-chalk" strokeWidth={1.5} />}
+              label="Total Members" 
+              value={statsQuery.isLoading ? '-' : formatTotal(statsQuery.data?.members ?? 6)} 
+            />
           </div>
-          <Seam />
 
-          {myQuery.isLoading ? (
-            <div>
-              {[...Array(3)].map((_, i) => <Skeleton key={i} variant="row" />)}
-            </div>
-          ) : myQuery.isError ? (
-            <div className="px-panel py-8">
-              <ErrorState
-                headline="Could not load your submissions"
-                body="Try refreshing the page."
-                retry={() => myQuery.refetch()}
-              />
-            </div>
-          ) : mine.length === 0 ? (
-            <EmptyState
-              headline="Nothing called in yet."
-              body="Submit an achievement and it will appear here while a core member checks it."
-              action={
-                <Button variant="secondary" lead="+" onClick={() => navigate('/submit')}>
-                  Submit achievement
+          {/* Feeds */}
+          <div className="w-full flex flex-col gap-8">
+            
+            {/* Your Calls (Stand-out Theme) */}
+            <div className="rounded-2xl border border-lamp/30 bg-gradient-to-b from-lamp/15 to-recess shadow-glow overflow-hidden relative">
+              <div className="absolute top-0 right-1/4 w-64 h-64 bg-lamp/20 rounded-full blur-[80px] pointer-events-none" />
+
+              <div className="flex items-center justify-between px-6 py-5 border-b border-lamp/20 relative z-10">
+                <h2 className="text-base font-semibold text-chalk">Your Calls</h2>
+                <Button variant="primary" size="sm" lead="+" onClick={() => navigate('/submit')}>
+                  Submit
                 </Button>
-              }
-            />
-          ) : (
-            <div>
-              {(mine as any[]).map((row) => (
-                <div key={row.id}>
-                  <MyCallRow row={row} onEdit={() => navigate(`/submit?edit=${row.id}`)} />
-                  <Seam />
-                </div>
-              ))}
+              </div>
+
+              <div className="relative z-10">
+                {myQuery.isLoading ? (
+                  <div>
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} variant="row" />)}
+                  </div>
+                ) : myQuery.isError ? (
+                  <div className="px-panel py-8">
+                    <ErrorState
+                      headline="Could not load your submissions"
+                      body="Try refreshing the page."
+                      retry={() => myQuery.refetch()}
+                    />
+                  </div>
+                ) : mine.length === 0 ? (
+                  <div className="px-6 py-10 text-center">
+                    <p className="text-chalk font-medium mb-1">Nothing called in yet.</p>
+                    <p className="text-muted text-sm">Submit an achievement and it will appear here while a core member checks it.</p>
+                  </div>
+                ) : (
+                  <div>
+                    {(mine as any[]).map((row, index) => (
+                      <div key={row.id}>
+                        <MyCallRow row={row} onEdit={() => navigate(`/submit?edit=${row.id}`)} />
+                        {index < mine.length - 1 && <div className="h-px w-full bg-lamp/10" />}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </BoardPanel>
+
+            {/* Recent Contributions */}
+            <div className="rounded-2xl border border-lamp/30 bg-gradient-to-b from-lamp/15 to-recess shadow-glow overflow-hidden relative">
+              <div className="absolute top-0 right-1/4 w-64 h-64 bg-lamp/20 rounded-full blur-[80px] pointer-events-none" />
+
+              <div className="flex items-center justify-between px-6 py-5 border-b border-lamp/20 relative z-10">
+                <h2 className="text-base font-semibold text-chalk">Recent Contributions</h2>
+                <TextButton onClick={() => {}} className="text-sm">View All</TextButton>
+              </div>
+
+              <div className="relative z-10">
+                {feedQuery.isLoading ? (
+                  <div>
+                    {[...Array(5)].map((_, i) => <Skeleton key={i} variant="row" />)}
+                  </div>
+                ) : feedQuery.isError ? (
+                  <div className="px-panel py-8">
+                    <ErrorState
+                      headline="Could not load the feed"
+                      body="The board feed failed to load. Try refreshing."
+                      retry={() => feedQuery.refetch()}
+                    />
+                  </div>
+                ) : feed.length === 0 ? (
+                  <EmptyState
+                    headline="The board is empty."
+                    body="Be the first to call something in. Submit an achievement and a core member will post it."
+                  />
+                ) : (
+                  <div>
+                    {feed.map((row: any) => (
+                      <FeedRow
+                        key={row.id}
+                        who={row.member_name}
+                        what={row.activity_label}
+                        level={row.activity_level}
+                        when={row.posted_at ?? row.occurred_on}
+                        avatarUrl={feedAvatars[row.id]}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </div>
+        </div>
       </BoardLayout>
     )
   }
-
 
   function MyCallRow({ row, onEdit }: { row: any; onEdit: () => void }) {
     const [expanded, setExpanded] = useState(true && row.status === 'needs_info')
@@ -316,7 +327,7 @@
           )}
         </button>
         {expanded && hasNote && (
-          <div className="bg-recess px-4 py-3 border-t border-seam flex flex-col gap-2">
+          <div className="glass-panel px-4 py-3 border-t border-seam/40 flex flex-col gap-2">
             <p className="text-sm text-chalk/70">{row.decision_note}</p>
             {row.status === 'needs_info' && (
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">

@@ -1,6 +1,6 @@
-export function BoardPanel({ children, padded = true }: { children: React.ReactNode, padded?: boolean }) {
+export function BoardPanel({ children, padded = true, className = '' }: { children: React.ReactNode, padded?: boolean, className?: string }) {
   return (
-    <div className={`bg-enamel border-inset border-seam rounded-panel ${padded ? 'p-panel' : ''}`}>
+    <div className={`glass-card rounded-panel ${padded ? 'p-panel' : ''} ${className}`}>
       {children}
     </div>
   )

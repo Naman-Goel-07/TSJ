@@ -1,4 +1,3 @@
-import { Seam } from '../primitives/Seam'
 import { Avatar } from '../media/Avatar'
 
 type FeedRowProps = {
@@ -9,28 +8,28 @@ type FeedRowProps = {
   avatarUrl?: string | null
 }
 
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+function formatTimeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 60) return `${Math.max(1, m)}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  return `${d}d ago`
 }
 
 export function FeedRow({ who, what, level, when, avatarUrl }: FeedRowProps) {
   const label = level ? `${what} — ${level}` : what
+  const timeAgo = formatTimeAgo(when)
+
   return (
-    <div className="h-row flex items-center gap-0 hover:bg-lit transition-none group">
-      {/* Name column — the picture is decorative, the name beside it is the label */}
-      <div className="w-40 px-3 flex items-center gap-2.5 shrink-0">
-        <Avatar name={who} url={avatarUrl} size="sm" />
-        <span className="text-sm text-chalk font-medium truncate">{who}</span>
+    <div className="flex items-center gap-4 px-6 py-4 hover:bg-lamp/[0.04] transition-colors duration-200 group border-b border-lamp/10 last:border-b-0 relative z-10">
+      <div className="shrink-0 flex items-center justify-center">
+        <Avatar name={who} url={avatarUrl} size="md" />
       </div>
-      <Seam orientation="vertical" />
-      {/* Activity column */}
-      <div className="flex-1 px-4 text-sm text-chalk truncate">{label}</div>
-      <Seam orientation="vertical" />
-      {/* Date column */}
-      <div className="w-20 px-4 text-sm text-chalk/60 text-right font-display tabular-nums shrink-0">
-        {formatDate(when)}
-      </div>
+      <div className="w-32 shrink-0 text-sm text-chalk font-semibold truncate">{who}</div>
+      <div className="flex-1 text-sm text-muted truncate">{label}</div>
+      <div className="text-xs text-dim text-right tabular-nums shrink-0">{timeAgo}</div>
     </div>
   )
 }

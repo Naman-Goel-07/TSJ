@@ -203,7 +203,7 @@ export function Login() {
   if (stage === 'check-email') {
     return (
       <PlainLayout eyebrow="Awaiting confirmation">
-        <BoardPanel>
+        <BoardPanel className="glass-panel">
           <div className="flex flex-col gap-4">
             <div>
               <h2 className="font-display text-lg font-bold text-chalk">Check your inbox</h2>
@@ -245,7 +245,7 @@ export function Login() {
 
   return (
     <PlainLayout tagline="Every achievement leaves an echo.">
-      <BoardPanel>
+      <BoardPanel className="glass-panel">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {notice && <Notice tone="good">{notice}</Notice>}
           {error && <Notice tone="error">{error}</Notice>}

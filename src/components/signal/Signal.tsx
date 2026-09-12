@@ -103,7 +103,15 @@ export function Starfield({ count = 130 }: { count?: number }) {
 }
 
 export function Haze() {
-  return <div className="haze absolute inset-0 -z-10 pointer-events-none" aria-hidden="true" />
+  return (
+    <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden" aria-hidden="true">
+      <div className="haze absolute inset-0" />
+      <div className="haze-flare" />
+      <div className="haze-glow" />
+      <div className="haze-grain" />
+      <div className="haze-vignette" />
+    </div>
+  )
 }
 
 /**

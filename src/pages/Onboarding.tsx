@@ -78,7 +78,7 @@ export function Onboarding() {
 
   return (
     <PlainLayout>
-      <BoardPanel>
+      <BoardPanel className="glass-panel">
         <div className="mb-6">
           <h2 className="text-xl text-chalk font-semibold mb-2">Welcome to the board</h2>
           <p className="text-sm text-chalk/60">

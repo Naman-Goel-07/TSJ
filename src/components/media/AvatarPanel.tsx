@@ -163,60 +163,48 @@ export function AvatarPanel() {
   }
 
   return (
-    <BoardPanel padded={false}>
-      <div className="px-panel pt-panel pb-2">
-        <SignLabel>Your picture</SignLabel>
-      </div>
-      <Seam />
-
-      <div className="p-panel flex flex-col sm:flex-row sm:items-start gap-6">
+    <div className="flex flex-col sm:flex-row sm:items-start gap-6">
+      <div className="shrink-0">
         <Avatar name={profile?.full_name ?? ''} url={url} size="xl" />
-
-        <div className="flex-1 min-w-0 flex flex-col gap-4">
-          {error && <Notice tone="error">{error}</Notice>}
-          {done && !error && <Notice tone="good">{done}</Notice>}
-
-          <p className="text-sm text-muted">
-            PNG, JPEG or WebP, up to 5 MB. A square photo works best. Anything else is
-            cropped to the circle rather than squashed into it, so faces stay the right
-            shape.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-2">
-            <input
-              id="avatar_file"
-              type="file"
-              accept={ACCEPT_ATTR}
-              disabled={busy}
-              className="sr-only peer"
-              onChange={e => {
-                const picked = e.target.files?.[0]
-                e.target.value = ''
-                handlePick(picked)
-              }}
-            />
-            <label htmlFor="avatar_file" className={PICK_LABEL}>
-              {busy ? 'Working' : path ? 'Replace photo' : 'Choose a photo'}
-            </label>
-
-            {path && (
-              <Button
-                variant="quiet"
-                onClick={handleRemove}
-                disabled={busy}
-                className="w-full sm:w-auto"
-              >
-                Remove
-              </Button>
-            )}
-          </div>
-
-          <p className="text-xs text-muted">
-            Anyone can see this on the public intro page, signed in or not. Nothing else
-            about your record is public there.
-          </p>
-        </div>
       </div>
-    </BoardPanel>
+
+      <div className="flex-1 min-w-0 flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            id="avatar_file"
+            type="file"
+            accept={ACCEPT_ATTR}
+            disabled={busy}
+            className="sr-only peer"
+            onChange={e => {
+              const picked = e.target.files?.[0]
+              e.target.value = ''
+              handlePick(picked)
+            }}
+          />
+          <label htmlFor="avatar_file" className={PICK_LABEL}>
+            {busy ? 'Working' : path ? 'Replace photo' : 'Choose a photo'}
+          </label>
+
+          {path && (
+            <Button
+              variant="quiet"
+              onClick={handleRemove}
+              disabled={busy}
+              className="w-full sm:w-auto"
+            >
+              Remove
+            </Button>
+          )}
+        </div>
+
+        <p className="text-sm text-muted">
+          PNG, JPEG or WebP, up to 5 MB. A square photo works best.
+        </p>
+        
+        {error && <Notice tone="error">{error}</Notice>}
+        {done && !error && <Notice tone="good">{done}</Notice>}
+      </div>
+    </div>
   )
 }

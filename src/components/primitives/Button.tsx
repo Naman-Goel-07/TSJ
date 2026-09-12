@@ -39,25 +39,25 @@ const SIZES: Record<Size, string> = {
  */
 const VARIANTS: Record<Variant, { className: string; echo: string }> = {
   primary: {
-    echo: '255 46 85',
+    echo: '184 63 90',
     className:
       'border-lamp/40 bg-lamp/[0.06] shadow-glow ' +
       'hover:enabled:border-lamp/[0.78] hover:enabled:bg-lamp/[0.12] hover:enabled:shadow-glow-lg',
   },
   secondary: {
-    echo: '242 242 245',
+    echo: '247 232 220',
     className:
       'border-lip text-muted ' +
       'hover:enabled:border-chalk hover:enabled:text-chalk hover:enabled:bg-chalk/[0.03]',
   },
   destructive: {
-    echo: '255 92 56',
+    echo: '154 113 128',
     className:
       'border-flag/45 bg-flag/[0.05] text-flare ' +
       'hover:enabled:border-flag/85 hover:enabled:text-chalk hover:enabled:shadow-glow-danger',
   },
   quiet: {
-    echo: '242 242 245',
+    echo: '247 232 220',
     className: 'border-transparent text-muted hover:enabled:text-chalk hover:enabled:bg-chalk/[0.04]',
   },
 }
