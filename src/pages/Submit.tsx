@@ -551,7 +551,7 @@ export function Submit() {
           })
         : await supabase.rpc('submit_achievement', {
             p_id: submissionId,
-            p_team_id = 'f0ab9a4a-2e4b-4568-99ef-5b4736cc33c5',
+            p_team_id : 'f0ab9a4a-2e4b-4568-99ef-5b4736cc33c5',
             p_activity_id: values.activity_id,
             p_title: values.title,
             p_occurred_on: values.occurred_on,
