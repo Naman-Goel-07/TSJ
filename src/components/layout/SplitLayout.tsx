@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
-import { Starfield, Haze, Wordmark } from '../signal/Signal'
+import { Starfield, Haze } from '../signal/Signal'
 
 export function SplitLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
@@ -23,8 +23,7 @@ export function SplitLayout({ children }: { children: ReactNode }) {
         </button>
 
         <div className="relative z-10 flex flex-col items-center">
-          <Wordmark size="hero" className="mb-2">ECHO</Wordmark>
-          <div className="w-[120px] h-[2px] bg-gradient-to-r from-transparent via-lamp to-transparent opacity-60 mt-2" />
+          <img src="/logo.png" alt="ECHO" className="w-48 sm:w-64 max-w-[80%] h-auto object-contain" />
         </div>
       </div>
 
