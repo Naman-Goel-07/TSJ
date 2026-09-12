@@ -172,7 +172,7 @@ export function Wordmark({
   )
 }
 
-/** The void, assembled: particulate, bloom, content, glass. */
+/** The void, assembled: content on the theme background. */
 export function VoidScreen({
   children,
   className = '',
@@ -181,9 +181,7 @@ export function VoidScreen({
   className?: string
 }) {
   return (
-    <div className={`glass relative min-h-screen bg-transparent overflow-hidden isolate ${className}`}>
-      <Starfield />
-      <Haze />
+    <div className={`relative min-h-screen bg-transparent overflow-hidden isolate ${className}`}>
       {children}
     </div>
   )

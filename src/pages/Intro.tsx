@@ -335,9 +335,7 @@ export function Intro() {
       </nav>
 
       {/* ─── Hero section ─────────────────────────────────────────────── */}
-      <section className="glass relative min-h-screen overflow-hidden isolate flex flex-col items-center justify-center px-gutter pt-16">
-        <Starfield />
-        <Haze />
+      <section className="relative min-h-screen overflow-hidden isolate flex flex-col items-center justify-center px-gutter pt-16">
 
         <HeroWordmark />
 
@@ -362,10 +360,8 @@ export function Intro() {
       <section
         ref={teamRef}
         id="team"
-        className="glass relative overflow-hidden isolate flex flex-col items-center px-gutter py-24 w-full"
+        className="relative overflow-hidden isolate flex flex-col items-center px-gutter py-24 w-full"
       >
-        <Starfield count={80} />
-        <Haze />
 
         <div className="w-full max-w-booth mx-auto relative z-[1]">
           {rosterQuery.isLoading ? (

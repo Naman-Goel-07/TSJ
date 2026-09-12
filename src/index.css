@@ -11,10 +11,10 @@
     background-image:
       linear-gradient(rgba(16, 8, 18, 0.72), rgba(16, 8, 18, 0.72)),
       url('/bg-theme.jpg');
-    background-size: auto, 600px;
-    background-position: center, center;
-    background-attachment: fixed, fixed;
-    background-repeat: repeat, repeat;
+    background-size: 150vw auto;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
   }
 
   /* One focus treatment, everywhere, always visible. Rose, because focus is a
